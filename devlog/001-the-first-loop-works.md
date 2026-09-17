@@ -12,7 +12,7 @@ The scanner is deliberately modest. One TCP connect sweep over the 100 ports mos
 
 Two bugs today worth writing down.
 
-The port list was wrong. I assembled the top 100 list by hand and wrote a test asserting it contains 21, 22, 23, 80, 443 and 3389. The test failed: no 3389. That means the RDP finding, the one high severity port finding in the whole catalog, could never fire. A test that checks a data file felt like ceremony right up until it caught exactly this. Port 90 got dropped (never seen it open), 3389 went in.
+The port list was wrong. I assembled the top 100 list by hand and wrote a test asserting it contains 21, 22, 23, 80, 443 and 3389. The test failed: no 3389. That means the RDP finding, the one high severity port finding in the whole catalog, could never fire. A test that checks a data file felt like ceremony right up until it caught exactly this. Port 90 got dropped, 3389 went in.
 
 ![scan running](img/03-scan-running.png)
 
@@ -22,6 +22,6 @@ Scanme's port 80 is haunted. In one run the sweep sees it open and the report co
 
 Choices, and why: SQLite through Drizzle instead of Postgres, because a second service to babysit is a second reason not to ship. The scan worker is a plain interval in the server process with a global guard, the least infrastructure I could get away with, and it survives hot reloads without double scanning. Verification is one TXT record at _openports.<domain>: cheap for the owner, undeniable for me, and the worker rechecks the target status before it touches the network, so there is no bypass path in the code.
 
-What currently sucks: no service identification, so "ports 9929 and 31337 open" (both genuinely open on scanme) tells you nothing about what is listening. The TLS check only runs when 443 answers, so mail TLS on 465 and 993 stays invisible. One worker means one scan at a time, fine at one target, embarrassing at fifty. And my own banned-character grep keeps finding an em dash inside a markdown file that next dev regenerates on every boot, so that file lives in .gitignore now. The grep wins.
+What currently sucks: no service identification, so "ports 9929 and 31337 open" (both real scanme ports) tells you nothing about what is listening. The TLS check only runs when 443 answers, so mail TLS on 465 and 993 stays invisible. One worker means one scan at a time, fine at one target, embarrassing at fifty. And my own banned-character grep keeps finding an em dash inside a markdown file that next dev regenerates on every boot, so that file lives in .gitignore now. The grep wins.
 
 Next: banner grabbing on open ports so a finding says "OpenSSH on 22" instead of a bare number, scheduled rescans, and a diff between scans, because "port 3389 appeared since yesterday" is the actual product. The rest is decoration.
