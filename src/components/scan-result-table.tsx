@@ -4,6 +4,7 @@ import { formatDuration } from "@/lib/format";
 // the full scan result as one table. this is the interface, not a summary
 // of it: everything the scanner learned, in the order it learned it.
 export default function ScanResultTable({ result }: { result: ScanResult }) {
+  const bannerLines = (result.banners ?? []).map((b) => `${b.port}: ${b.line}`);
   const rows: [string, string][] = [
     ["resolved", result.addresses.join(", ")],
     [
@@ -13,6 +14,7 @@ export default function ScanResultTable({ result }: { result: ScanResult }) {
         `${result.ports.filtered} filtered`,
     ],
     ["ports open", result.ports.open.join(", ") || "none"],
+    ...(bannerLines.length > 0 ? [["services", bannerLines.join("\n")] as [string, string]] : []),
     ["tls 443", tlsRow(result.tls)],
     ["spf", result.dns.spf ?? "absent"],
     ["dmarc", result.dns.dmarc ?? "absent"],
@@ -31,7 +33,7 @@ export default function ScanResultTable({ result }: { result: ScanResult }) {
             >
               {label}
             </th>
-            <td className="py-1.5 font-mono text-xs break-words text-ink">
+            <td className="py-1.5 font-mono text-xs break-words whitespace-pre-line text-ink">
               {value}
             </td>
           </tr>

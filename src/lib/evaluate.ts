@@ -17,6 +17,13 @@ const DANGEROUS_PORTS: Record<number, string> = {
 const EXPECTED_PORTS = new Set([80, 443]);
 const CERT_EXPIRY_WARN_DAYS = 30;
 
+// "22: SSH-2.0-OpenSSH_9.6p1" lines for the ports a finding is about
+function bannerLinesFor(r: ScanResult, ports: number[]): string[] {
+  return (r.banners ?? [])
+    .filter((b) => ports.includes(b.port))
+    .map((b) => `${b.port}: ${b.line}`);
+}
+
 // turns raw scan output into catalog findings. pure function: same input,
 // same output, no network, no database. real data only, the scanner decides
 // what happened, this only reads it.
@@ -76,6 +83,7 @@ export function evaluateScanResult(r: ScanResult): DerivedFinding[] {
       evidence: {
         ports: dangerous,
         protocols: dangerous.map((p) => DANGEROUS_PORTS[p]),
+        banners: bannerLinesFor(r, dangerous),
       },
     });
   }
@@ -87,7 +95,10 @@ export function evaluateScanResult(r: ScanResult): DerivedFinding[] {
     out.push({
       type: "open_port_unexpected",
       severity: FINDING_CATALOG.open_port_unexpected.severity,
-      evidence: { ports: unexpected },
+      evidence: {
+        ports: unexpected,
+        banners: bannerLinesFor(r, unexpected),
+      },
     });
   }
 

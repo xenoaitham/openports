@@ -23,6 +23,9 @@ export const scans = sqliteTable(
     status: text("status").$type<ScanStatus>().notNull().default("queued"),
     error: text("error"),
     result: text("result"),
+    // what changed against the previous done scan, json, written at
+    // completion. display recomputes with hysteresis from the last scans.
+    diff: text("diff"),
     startedAt: integer("started_at", { mode: "timestamp_ms" }),
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" })

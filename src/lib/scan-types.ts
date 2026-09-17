@@ -1,3 +1,7 @@
+import type { Banner } from "./banners";
+
+export type { Banner } from "./banners";
+
 export interface DnsResult {
   spf: string | null;
   dmarc: string | null;
@@ -39,4 +43,5 @@ export interface ScanResult {
   tls: TlsResult;
   dns: DnsResult;
   http: HttpResult;
+  banners: Banner[];
 }

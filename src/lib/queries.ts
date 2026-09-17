@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { findings, scans, targets } from "@/db/schema";
 import { severityRank } from "./catalog";
+import { diffWithHysteresis, type DiffInput } from "./diff";
 import { isPreallowed, normalizeDomain, resolvePublicHost } from "./host";
 import { generateToken, checkTxtRecord } from "./verify";
 import { enqueueScan } from "./worker";
@@ -128,6 +129,15 @@ function parsePorts(result: string | null): number[] {
   }
 }
 
+function parseResult(result: string | null): ScanResult | null {
+  if (!result) return null;
+  try {
+    return JSON.parse(result) as ScanResult;
+  } catch {
+    return null;
+  }
+}
+
 export async function getTargetDetail(id: number): Promise<TargetDetail | null> {
   const [target] = await db
     .select()
@@ -161,12 +171,14 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
   }));
 
   const countRows = await db
-    .select({ scanId: findings.scanId })
+    .select({ scanId: findings.scanId, type: findings.type })
     .from(findings)
     .where(eq(findings.targetId, id));
   const countByScan = new Map<number, number>();
+  const typesByScan = new Map<number, string[]>();
   for (const row of countRows) {
     countByScan.set(row.scanId, (countByScan.get(row.scanId) ?? 0) + 1);
+    typesByScan.set(row.scanId, [...(typesByScan.get(row.scanId) ?? []), row.type]);
   }
   for (const sv of scanViews) {
     sv.findingCount = countByScan.get(sv.id) ?? 0;
@@ -202,11 +214,31 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
     }
   }
 
+  // changes feed: latest done scan vs the one before, labeled with
+  // hysteresis from the scan before that
+  let changes: TargetDetail["changes"] = null;
+  const [prevDone, prevPrevDone] = [doneScans[1] ?? null, doneScans[2] ?? null];
+  if (latestDone && prevDone) {
+    const input = (row: typeof scans.$inferSelect): DiffInput => ({
+      result: parseResult(row.result),
+      findingTypes: typesByScan.get(row.id) ?? [],
+    });
+    changes = {
+      since: prevDone.startedAt ? prevDone.startedAt.toISOString() : null,
+      diff: diffWithHysteresis(
+        prevPrevDone ? input(prevPrevDone) : null,
+        input(prevDone),
+        input(latestDone),
+      ),
+    };
+  }
+
   return {
     target: serializeTarget(target),
     scans: scanViews,
     findings: findingViews,
     rawResult,
+    changes,
   };
 }
 

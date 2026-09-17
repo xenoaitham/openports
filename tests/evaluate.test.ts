@@ -22,6 +22,7 @@ function baseResult(overrides: Partial<ScanResult> = {}): ScanResult {
       hsts: "max-age=31536000",
       server: null,
     },
+    banners: [],
     ...overrides,
   };
 }
@@ -112,6 +113,24 @@ test("dangerous ports win over the generic unexpected finding", () => {
   assert.deepEqual(unexpected?.evidence.ports, [22, 8080]);
   assert.equal(dangerous?.severity, "high");
   assert.equal(unexpected?.severity, "low");
+});
+
+test("banners for the finding's ports land in the evidence", () => {
+  const result = evaluateScanResult(
+    baseResult({
+      ports: { scanned: 100, open: [22, 80, 443, 8080], refused: 97, filtered: 0, durationMs: 2000 },
+      banners: [
+        { port: 22, kind: "read", line: "SSH-2.0-OpenSSH_9.6p1" },
+        { port: 80, kind: "http", line: "HTTP 301; server nginx" },
+        { port: 8080, kind: "silent", line: "no banner" },
+      ],
+    }),
+  );
+  const unexpected = result.find((f) => f.type === "open_port_unexpected");
+  assert.deepEqual(unexpected?.evidence.banners, [
+    "22: SSH-2.0-OpenSSH_9.6p1",
+    "8080: no banner",
+  ]);
 });
 
 test("http findings need the data to back them", () => {

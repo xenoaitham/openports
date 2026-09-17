@@ -1,5 +1,8 @@
 import type { ScanResult } from "./scan-types";
+import type { ScanDiff } from "./diff";
 import type { ScanStatus, Severity, TargetStatus } from "./types";
+
+export type { ScanResult } from "./scan-types";
 
 export interface FindingView {
   id: number;
@@ -35,6 +38,9 @@ export interface TargetDetail {
   scans: ScanView[];
   findings: FindingView[];
   rawResult: ScanResult | null;
+  // what the latest done scan changed against the one before it, with
+  // hysteresis labels. null when no previous done scan exists.
+  changes: { since: string | null; diff: ScanDiff } | null;
 }
 
 export interface ScanSummary {

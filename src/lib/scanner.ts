@@ -3,6 +3,7 @@ import tls from "node:tls";
 import { promises as dns } from "node:dns";
 import { TOP_PORTS } from "./ports";
 import { resolvePublicHost } from "./host";
+import { grabAllBanners } from "./banners";
 import type { HttpResult, ScanResult, TlsResult } from "./scan-types";
 
 const CONNECT_TIMEOUT_MS = 1500;
@@ -234,8 +235,12 @@ export async function runScanChecks(domain: string): Promise<ScanResult> {
     ? await checkTls(host)
     : { checked: false, ok: false, error: "port 443 is not open" };
 
-  const dnsResult = await checkDns(domain);
-  const http = await checkHttp(domain, ports.open.includes(80));
+  // one short conversation per open port, in parallel with the rest
+  const [dnsResult, http, banners] = await Promise.all([
+    checkDns(domain),
+    checkHttp(domain, ports.open.includes(80)),
+    grabAllBanners(host, ports.open),
+  ]);
 
   return {
     host: domain,
@@ -244,5 +249,6 @@ export async function runScanChecks(domain: string): Promise<ScanResult> {
     tls,
     dns: dnsResult,
     http,
+    banners,
   };
 }
