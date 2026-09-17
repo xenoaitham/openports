@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sqlite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# local files next dev regenerates, keep out of the repo
+/AGENTS.md
+/CLAUDE.md
