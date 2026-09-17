@@ -49,3 +49,6 @@ next-env.d.ts
 # local files next dev regenerates, keep out of the repo
 /AGENTS.md
 /CLAUDE.md
+
+# local hook state
+/.mimosa/
