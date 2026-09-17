@@ -29,7 +29,13 @@ export interface HttpResult {
 export interface ScanResult {
   host: string;
   addresses: string[];
-  ports: { scanned: number; open: number[]; durationMs: number };
+  ports: {
+    scanned: number;
+    open: number[];
+    refused: number;
+    filtered: number;
+    durationMs: number;
+  };
   tls: TlsResult;
   dns: DnsResult;
   http: HttpResult;

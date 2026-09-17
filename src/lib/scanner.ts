@@ -11,21 +11,31 @@ const TLS_TIMEOUT_MS = 5000;
 const HTTP_TIMEOUT_MS = 6000;
 
 // opens a raw tcp connection and destroys it. nothing is sent, no service
-// probing: a port is "open" when the handshake completes.
-function checkPort(host: string, port: number): Promise<boolean> {
+// probing: a port is "open" when the handshake completes. refused means the
+// host answered with a reset, filtered means we heard nothing back.
+function checkPort(
+  host: string,
+  port: number,
+): Promise<"open" | "refused" | "filtered"> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     let settled = false;
-    const done = (open: boolean) => {
+    const done = (state: "open" | "refused" | "filtered") => {
       if (settled) return;
       settled = true;
       socket.destroy();
-      resolve(open);
+      resolve(state);
     };
     socket.setTimeout(CONNECT_TIMEOUT_MS);
-    socket.once("connect", () => done(true));
-    socket.once("timeout", () => done(false));
-    socket.once("error", () => done(false));
+    socket.once("connect", () => done("open"));
+    socket.once("timeout", () => done("filtered"));
+    socket.once("error", (err) =>
+      done(
+        (err as NodeJS.ErrnoException).code === "ECONNREFUSED"
+          ? "refused"
+          : "filtered",
+      ),
+    );
     socket.connect(port, host);
   });
 }
@@ -33,16 +43,23 @@ function checkPort(host: string, port: number): Promise<boolean> {
 async function sweepPorts(host: string): Promise<{
   scanned: number;
   open: number[];
+  refused: number;
+  filtered: number;
   durationMs: number;
 }> {
   const started = Date.now();
   const open: number[] = [];
+  let refused = 0;
+  let filtered = 0;
   let cursor = 0;
 
   async function worker() {
     while (cursor < TOP_PORTS.length) {
       const port = TOP_PORTS[cursor++];
-      if (await checkPort(host, port)) open.push(port);
+      const state = await checkPort(host, port);
+      if (state === "open") open.push(port);
+      else if (state === "refused") refused += 1;
+      else filtered += 1;
     }
   }
 
@@ -50,6 +67,8 @@ async function sweepPorts(host: string): Promise<{
   return {
     scanned: TOP_PORTS.length,
     open: open.sort((a, b) => a - b),
+    refused,
+    filtered,
     durationMs: Date.now() - started,
   };
 }

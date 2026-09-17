@@ -95,7 +95,10 @@ export function evaluateScanResult(r: ScanResult): DerivedFinding[] {
     out.push({
       type: "no_https_redirect",
       severity: FINDING_CATALOG.no_https_redirect.severity,
-      evidence: { status: r.http.status, finalUrl: r.http.finalUrl },
+      evidence: {
+        ...(r.http.status !== undefined ? { status: r.http.status } : {}),
+        ...(r.http.error ? { httpError: r.http.error } : {}),
+      },
     });
   }
 

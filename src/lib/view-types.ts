@@ -25,6 +25,7 @@ export interface TargetView {
   status: TargetStatus;
   failReason: string | null;
   verifyToken: string;
+  demo: boolean;
   createdAt: string;
   verifiedAt: string | null;
 }

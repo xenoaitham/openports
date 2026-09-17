@@ -111,6 +111,7 @@ function serializeTarget(t: typeof targets.$inferSelect): TargetView {
     status: t.status,
     failReason: t.failReason,
     verifyToken: t.verifyToken,
+    demo: isPreallowed(t.domain),
     createdAt: t.createdAt.toISOString(),
     verifiedAt: t.verifiedAt ? t.verifiedAt.toISOString() : null,
   };
@@ -158,6 +159,18 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
     findingCount: 0,
   }));
 
+  const countRows = await db
+    .select({ scanId: findings.scanId })
+    .from(findings)
+    .where(eq(findings.targetId, id));
+  const countByScan = new Map<number, number>();
+  for (const row of countRows) {
+    countByScan.set(row.scanId, (countByScan.get(row.scanId) ?? 0) + 1);
+  }
+  for (const sv of scanViews) {
+    sv.findingCount = countByScan.get(sv.id) ?? 0;
+  }
+
   let findingViews: FindingView[] = [];
   let rawResult: ScanResult | null = null;
   if (latestDone) {
@@ -175,26 +188,12 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
       }
       return { id: f.id, type: f.type, severity: f.severity, evidence };
     });
-    for (const sv of scanViews) {
-      if (sv.id === latestDone.id) sv.findingCount = findingViews.length;
-    }
     if (latestDone.result) {
       try {
         rawResult = JSON.parse(latestDone.result) as ScanResult;
       } catch {
         rawResult = null;
       }
-    }
-  }
-
-  // count findings per historical scan for the history table
-  if (scanViews.some((s) => s.findingCount === 0 && s.status === "done")) {
-    const all = await db
-      .select({ scanId: findings.scanId, id: findings.id })
-      .from(findings)
-      .where(eq(findings.targetId, id));
-    for (const sv of scanViews) {
-      sv.findingCount = all.filter((f) => f.scanId === sv.id).length;
     }
   }
 
