@@ -6,7 +6,7 @@ OpenPorts watches a domain from the outside and reports what it exposes: open po
 
 ![landing](img/01-landing.png)
 
-The scanner is deliberately modest. One TCP connect sweep over the 100 ports most likely to be open, 64 connections at a time with a 1.5 second timeout per port, a TLS handshake on 443 to read the certificate, DNS lookups for SPF, DMARC and MX, and three HTTP checks: HSTS, the http to https redirect, and the Server banner. Nothing sends a payload, nothing probes services. A full scan of scanme.nmap.org takes 1.7 to 2.4 seconds. Findings come out of one shared catalog module, each with a severity and a fix written in full sentences, because "check the CVE database" is where good intentions go to die.
+The scanner is deliberately modest. One TCP connect sweep over the 100 ports most likely to be open, 64 connections at a time with a 1.5 second timeout per port, a TLS handshake on 443 to read the certificate, DNS lookups for SPF, DMARC and MX, and three HTTP checks: HSTS, the http to https redirect, and the Server banner. Nothing sends a payload, nothing probes services. A full scan of scanme.nmap.org takes 1.7 to 2.4 seconds. Findings come from one shared catalog module, each with a severity and a fix written in full sentences.
 
 ![verification instructions](img/02-verify-instructions.png)
 
@@ -16,7 +16,7 @@ The port list was wrong. I assembled the top 100 list by hand and wrote a test a
 
 ![scan running](img/03-scan-running.png)
 
-Scanme's port 80 is haunted. In one run the sweep sees it open and the report comes back with 4 findings. Minutes later the SYN connects but the HTTP GET over the same port blackholes until timeout, and the report drops to 3 findings. Same host, nothing changed. For a monitoring product that is the worst possible behavior: the finding flips while the customer did nothing. The raw scan output now records refused versus filtered per port so I can see what the network actually said, and the redirect finding carries the http error next to it instead of pretending the check came back clean. The real fix, confirming a state change twice before calling it a change, goes on the alerts list.
+Scanme's port 80 is haunted. In one run the sweep sees it open and the report comes back with 4 findings. Minutes later the SYN connects but the HTTP GET over the same port blackholes until timeout, and the report drops to 3 findings. For a monitoring product that is the worst possible behavior: the finding flips while the customer did nothing. The raw scan output now records refused versus filtered per port so I can see what the network actually said, and the redirect finding carries the http error next to it instead of pretending the check came back clean. The real fix, confirming a state change twice before calling it a change, goes on the alerts list.
 
 ![findings](img/04-findings.png)
 
