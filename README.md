@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenPorts
 
-## Getting Started
+OpenPorts watches domains from the outside and reports what they expose to the internet: open ports, TLS certificates that are expired or about to be, mail records that allow spoofing, headers that leak the stack.
 
-First, run the development server:
+Small companies should not need a security team to answer one question: what does the internet see when it looks at us?
 
-```bash
+## Current state
+
+- The core loop works. Add a domain, prove ownership by publishing one TXT record, get scanned, read findings with a fix written out for each one.
+- There is no auth yet. Anyone using your instance sees every target, so run it locally or behind something that gates access.
+- One process, one SQLite file (through Drizzle), the scan worker is an interval in that same process. No queue, no redis, no docker.
+- Active scanning, the TCP port sweep, runs only against targets that passed the TXT check. The single exception is scanme.nmap.org, which the Nmap project runs for scanner testing. Passive DNS checks are safe and run before that.
+- The finding catalog and the code that derives findings from scan output live in plain modules with no UI imports, so the future public report page can reuse them without a refactor.
+
+## Run it
+
+```
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:4310. The database is created and migrated on start.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Optional demo data: `npm run seed` adds scanme.nmap.org and runs a real scan against it. Nothing is faked, so results vary a little between runs.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Tests: `npm test`.
 
-## Learn More
+## Devlog
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[001: the first loop works](devlog/001-the-first-loop-works.md)
