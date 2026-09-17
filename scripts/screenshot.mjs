@@ -99,6 +99,18 @@ if (await findingsHeading.isVisible()) {
 }
 await shot("09-findings");
 
+// 12: the changes feed against the previous scan. scanme's port 80 flaps
+// between runs, so there is usually something real to show here
+const changesHeading = page.getByRole("heading", {
+  name: "changes since the previous scan",
+});
+if (await changesHeading.isVisible()) {
+  await changesHeading.scrollIntoViewIfNeeded();
+  await shot("12-changes");
+} else {
+  console.log("note: no changes section, skipping 12-changes");
+}
+
 // 10: scan history
 await page.getByRole("heading", { name: "history" }).scrollIntoViewIfNeeded();
 await shot("10-history");
