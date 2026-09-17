@@ -25,12 +25,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/app" className="text-muted hover:text-ink">
                 targets
               </Link>
-              <a
-                href="https://github.com/xenoaitham/openports"
-                className="text-muted hover:text-ink"
-              >
-                devlog
-              </a>
             </nav>
           </div>
         </header>

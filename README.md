@@ -26,9 +26,3 @@ Open http://localhost:4310. The database is created and migrated on start.
 Optional demo data: `npm run seed` adds scanme.nmap.org and runs a real scan against it. Nothing is faked, so results vary a little between runs.
 
 Tests: `npm test`.
-
-## Devlog
-
-[001: the first loop works](devlog/001-the-first-loop-works.md)
-
-[002: the ui rework](devlog/002-the-ui-rework.md)

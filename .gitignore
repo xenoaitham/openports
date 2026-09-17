@@ -52,3 +52,6 @@ next-env.d.ts
 
 # local hook state
 /.mimosa/
+
+# local build notes and screenshots, keep out of the repo
+/notes/

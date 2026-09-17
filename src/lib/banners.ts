@@ -96,8 +96,10 @@ function readHttpBanner(host: string, port: number): Promise<string | null> {
       resolve(null);
     });
     socket.connect(port, host, () => {
+      // no browser identity header: the request says openports by sending
+      // nothing that pretends to be anything
       socket.write(
-        `GET / HTTP/1.0\r\nHost: ${host}\r\nUser-Agent: openports\r\nAccept: */*\r\n\r\n`,
+        `GET / HTTP/1.0\r\nHost: ${host}\r\nAccept: */*\r\n\r\n`,
       );
     });
     collect(

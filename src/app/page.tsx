@@ -34,12 +34,6 @@ export default async function Home() {
           <Link href="/app" className={btn}>
             add a domain
           </Link>
-          <a
-            href="https://github.com/xenoaitham/openports"
-            className="text-sm text-muted hover:text-ink"
-          >
-            read the devlog
-          </a>
         </div>
       </section>
 

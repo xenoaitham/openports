@@ -73,8 +73,8 @@ function httpRow(http: HttpResult): string {
   } else if (http.status !== undefined) {
     parts.push(`port 80 answers ${http.status}, no redirect`);
   } else {
-    // the sweep saw 80 open but http never answered: the scanme port 80
-    // haunting from devlog 001
+    // the sweep saw 80 open but http never answered: this host is known to
+    // flap between runs
     parts.push(`port 80 open, http request failed: ${shortError(http.error)}`);
   }
 

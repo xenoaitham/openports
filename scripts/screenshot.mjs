@@ -1,4 +1,5 @@
-// captures the full set of devlog screenshots from the real running app.
+// captures the full set of screenshots from the real running app, into a
+// local folder that stays out of the repo.
 // the caller wipes openports.db, migrates, builds and starts the production
 // server on 4310 first. OUT picks the output directory.
 //
@@ -10,7 +11,7 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:4310";
-const OUT = process.env.OUT ?? "devlog/img/002";
+const OUT = process.env.OUT ?? "notes/img/002";
 fs.mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
