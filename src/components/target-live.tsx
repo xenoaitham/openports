@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { TargetDetail } from "@/lib/view-types";
 import { formatDateTime, formatDuration, timeAgo } from "@/lib/format";
-import { ScanStatusBadge, TargetStatusBadge } from "./badges";
-import FindingCard from "./finding-card";
+import { ScanStatusWord, TargetStatusWord } from "./words";
+import FindingsList from "./findings";
+import ScanResultTable from "./scan-result-table";
 import RescanButton from "./rescan-button";
 import VerifyPanel from "./verify-panel";
-
-const h2 =
-  "font-mono text-[11px] uppercase tracking-wide text-muted";
 
 export default function TargetLive({ initial }: { initial: TargetDetail }) {
   const [detail, setDetail] = useState(initial);
@@ -21,7 +19,8 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
   }, [initial]);
 
   const active =
-    detail.scans[0]?.status === "queued" || detail.scans[0]?.status === "running";
+    detail.scans[0]?.status === "queued" ||
+    detail.scans[0]?.status === "running";
 
   useEffect(() => {
     if (!active) return;
@@ -45,19 +44,21 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
     <main className="mx-auto max-w-5xl px-4 py-10">
       <Link
         href="/app"
-        className="font-mono text-xs text-muted hover:text-ink"
+        className="text-xs text-muted hover:text-ink hover:underline"
       >
         &larr; all targets
       </Link>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-mono text-2xl text-ink">{target.domain}</h1>
-          <TargetStatusBadge status={target.status} />
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="font-mono text-2xl tracking-tight text-ink">
+            {target.domain}
+          </h1>
+          <span className="text-sm">
+            <TargetStatusWord status={target.status} />
+          </span>
           {target.demo && (
-            <span className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted">
-              demo target
-            </span>
+            <span className="text-xs text-muted">demo host</span>
           )}
         </div>
         {target.status === "verified" && <RescanButton id={target.id} />}
@@ -65,8 +66,8 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
 
       {target.demo && (
         <p className="mt-2 text-sm text-muted">
-          The Nmap project runs this host for scanner testing, so it is allowed
-          without the TXT step.
+          The Nmap project runs this host for scanner testing, so it is
+          allowed without the TXT step.
         </p>
       )}
 
@@ -76,87 +77,68 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
         </div>
       )}
 
-      <section aria-live="polite" className="mt-8">
-        <h2 className={h2}>latest scan</h2>
+      <section aria-live="polite" className="mt-10">
+        <h2 className="text-base font-medium">Latest scan</h2>
 
         {latest === null ? (
-          <p className="mt-3 rounded border border-dashed border-line p-6 text-sm text-muted">
+          <p className="mt-2 text-sm text-muted">
             No scans yet.{" "}
             {target.status === "verified"
               ? "Press run scan again to start one."
               : "The first scan starts as soon as the TXT record checks out."}
           </p>
         ) : latest.status === "queued" ? (
-          <div className="mt-3 flex items-center gap-3 rounded border border-medium/40 bg-medium/5 p-4">
-            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-medium" />
-            <p className="font-mono text-sm text-medium">
-              queued, starting shortly
-            </p>
-          </div>
+          <p className="mt-2 text-sm text-medium">
+            <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-medium align-middle" />
+            queued, starting shortly
+          </p>
         ) : latest.status === "running" ? (
-          <div className="mt-3 flex items-center gap-3 rounded border border-medium/40 bg-medium/5 p-4">
-            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-medium" />
-            <p className="font-mono text-sm text-medium">
-              running: sweeping 100 ports, then TLS, DNS and HTTP checks
-            </p>
-          </div>
+          <p className="mt-2 text-sm text-medium">
+            <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-medium align-middle" />
+            running: sweeping 100 ports, then TLS, DNS and HTTP checks
+          </p>
         ) : latest.status === "failed" ? (
-          <div className="mt-3 rounded border border-high/40 bg-high/5 p-4">
-            <p className="font-mono text-sm text-high">
+          <div className="mt-2">
+            <p className="text-sm text-high">
               scan failed: {latest.error}
             </p>
             <p className="mt-1 text-sm text-muted">
-              If the cause is on your side, fix it and run the scan again.
+              The cause is written into the scan row. Fix it on your side if
+              it is yours, then run the scan again.
             </p>
           </div>
         ) : (
-          <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1 font-mono text-xs text-muted">
-            <span>finished {timeAgo(latest.finishedAt)}</span>
-            <span>took {formatDuration(latest.durationMs)}</span>
-            <span>
-              ports open:{" "}
-              <span className="text-ink/80">
-                {latest.openPorts.length > 0
-                  ? latest.openPorts.join(", ")
-                  : "none"}
-              </span>
-            </span>
-            <span>
-              findings: <span className="text-ink/80">{findings.length}</span>
-            </span>
-          </div>
+          <>
+            {rawResult && <ScanResultTable result={rawResult} />}
+            <p className="mt-2 text-xs text-muted">
+              finished {timeAgo(latest.finishedAt)}, took{" "}
+              {formatDuration(latest.durationMs)}, started{" "}
+              {formatDateTime(latest.startedAt)}
+            </p>
+          </>
         )}
       </section>
 
       {latest?.status === "done" && (
-        <section className="mt-8">
-          <h2 className={h2}>findings</h2>
-          {findings.length === 0 ? (
-            <p className="mt-3 rounded border border-dashed border-line p-6 text-sm text-muted">
-              Nothing found in this scan. Every check came back clean. That is
-              a real result, not a missing check.
-            </p>
-          ) : (
-            <div className="mt-3 grid gap-3">
-              {findings.map((finding) => (
-                <FindingCard key={finding.id} finding={finding} />
-              ))}
-            </div>
-          )}
+        <section className="mt-10">
+          <h2 className="text-base font-medium">
+            Findings, worst first
+          </h2>
+          <FindingsList findings={findings} />
         </section>
       )}
 
       {scans.length > 1 && (
         <section className="mt-10">
-          <h2 className={h2}>history</h2>
+          <h2 className="text-base font-medium">History</h2>
           <table className="mt-3 w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-line text-left">
+              <tr className="border-b border-linestrong text-left">
                 {["started", "status", "took", "ports open", "findings"].map(
                   (name) => (
                     <th
                       key={name}
-                      className="py-2 pr-6 font-mono text-[11px] font-normal uppercase tracking-wide text-muted"
+                      className="py-2 pr-6 text-xs font-normal text-muted"
                     >
                       {name}
                     </th>
@@ -166,12 +148,12 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
             </thead>
             <tbody>
               {scans.map((scan) => (
-                <tr key={scan.id} className="border-b border-line/60">
+                <tr key={scan.id} className="border-b border-line">
                   <td className="py-2 pr-6 font-mono text-xs text-muted">
                     {formatDateTime(scan.startedAt)}
                   </td>
                   <td className="py-2 pr-6">
-                    <ScanStatusBadge status={scan.status} />
+                    <ScanStatusWord status={scan.status} />
                   </td>
                   <td className="py-2 pr-6 font-mono text-xs text-muted">
                     {formatDuration(scan.durationMs)}
@@ -192,11 +174,11 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
       )}
 
       {rawResult && (
-        <details className="mt-10 rounded border border-line bg-panel">
-          <summary className="cursor-pointer px-4 py-3 font-mono text-sm text-muted">
+        <details className="mt-10 border-b border-t border-line">
+          <summary className="cursor-pointer py-2.5 text-sm text-muted hover:text-ink">
             raw scan output
           </summary>
-          <pre className="overflow-x-auto border-t border-line px-4 py-3 font-mono text-xs text-muted">
+          <pre className="overflow-x-auto pb-3 font-mono text-xs text-muted">
             {JSON.stringify(rawResult, null, 2)}
           </pre>
         </details>

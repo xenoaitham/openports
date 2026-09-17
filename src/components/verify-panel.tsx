@@ -32,61 +32,46 @@ export default function VerifyPanel({ target }: { target: TargetView }) {
     setChecking(false);
   }
 
+  const btn =
+    "inline-block border border-ink px-3.5 py-2 text-sm text-ink hover:bg-ink hover:text-paper disabled:cursor-wait disabled:opacity-60";
+
   return (
-    <section
-      aria-live="polite"
-      className="rounded border border-line bg-panel p-5"
-    >
-      <h2 className="font-mono text-sm text-ink">
-        Prove you own {target.domain}
-      </h2>
+    <section aria-live="polite">
+      <h2 className="text-base font-medium">Prove you own {target.domain}</h2>
       <p className="mt-1 text-sm text-muted">
-        Add one TXT record at your DNS provider. Nothing is port scanned until
-        this check passes.
+        Add one TXT record at your DNS provider. Nothing is port scanned
+        until this check passes.
       </p>
 
-      <div className="mt-4 grid gap-3">
-        <div>
-          <span className="block font-mono text-[11px] uppercase tracking-wide text-muted">
-            record name
-          </span>
-          <div className="mt-1 flex items-center gap-3 rounded border border-line bg-base px-3 py-2">
-            <code className="break-all font-mono text-sm text-ink">
-              {txtName}
-            </code>
-            <CopyButton value={txtName} />
-          </div>
+      <dl className="mt-4 max-w-3xl">
+        <div className="flex items-baseline gap-4 border-b border-line py-2.5">
+          <dt className="w-28 shrink-0 text-xs text-muted">record name</dt>
+          <dd className="min-w-0 flex-1 break-all font-mono text-sm text-ink">
+            {txtName}
+          </dd>
+          <CopyButton value={txtName} />
         </div>
-        <div>
-          <span className="block font-mono text-[11px] uppercase tracking-wide text-muted">
-            record value
-          </span>
-          <div className="mt-1 flex items-center gap-3 rounded border border-line bg-base px-3 py-2">
-            <code className="break-all font-mono text-sm text-accent">
-              {target.verifyToken}
-            </code>
-            <CopyButton value={target.verifyToken} />
-          </div>
+        <div className="flex items-baseline gap-4 border-b border-line py-2.5">
+          <dt className="w-28 shrink-0 text-xs text-muted">record value</dt>
+          <dd className="min-w-0 flex-1 break-all font-mono text-sm text-ink">
+            {target.verifyToken}
+          </dd>
+          <CopyButton value={target.verifyToken} />
         </div>
-      </div>
+      </dl>
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          onClick={check}
-          disabled={checking}
-          className="rounded border border-accent/50 bg-accent/10 px-4 py-2 font-mono text-sm text-accent hover:bg-accent/20 disabled:cursor-wait disabled:opacity-60"
-        >
+        <button type="button" onClick={check} disabled={checking} className={btn}>
           {checking ? "checking..." : "check for the record"}
         </button>
         <span className="text-xs text-muted">
-          DNS can take a few minutes to spread. If the check fails, wait a bit
-          and try again.
+          DNS can take a few minutes to spread. If the check fails, wait a
+          bit and try again.
         </span>
       </div>
 
       {error && (
-        <p className="mt-3 font-mono text-sm text-high" role="alert">
+        <p className="mt-3 text-sm text-high" role="alert">
           last check failed: {error}
         </p>
       )}

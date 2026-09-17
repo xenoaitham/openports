@@ -20,7 +20,7 @@ export function CopyButton({ value }: { value: string }) {
       type="button"
       onClick={copy}
       aria-label={copied ? "copied" : "copy to clipboard"}
-      className="ml-auto shrink-0 rounded border border-line px-2 py-0.5 font-mono text-[11px] text-muted hover:border-accent hover:text-accent"
+      className="shrink-0 border border-linestrong px-1.5 py-0.5 text-xs text-muted hover:border-ink hover:text-ink"
     >
       {copied ? "copied" : "copy"}
     </button>

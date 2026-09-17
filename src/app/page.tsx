@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import FindingsList from "@/components/findings";
+import { getLandingReport } from "@/lib/queries";
+import { formatDuration, timeAgo } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "OpenPorts, outside-in monitoring",
@@ -7,86 +12,144 @@ export const metadata: Metadata = {
     "Point OpenPorts at a domain and it reports open ports, TLS expiry, mail records and header hygiene. Add a domain, prove it is yours, read the report.",
 };
 
-export default function Home() {
+const btn =
+  "inline-block border border-ink px-3.5 py-2 text-sm text-ink hover:bg-ink hover:text-paper";
+
+export default async function Home() {
+  const report = await getLandingReport();
+
   return (
-    <main className="mx-auto max-w-4xl px-4">
-      <section className="pt-16 pb-10">
-        <h1 className="max-w-2xl text-3xl font-semibold leading-snug text-ink">
-          See what your servers tell the internet.
+    <main className="mx-auto max-w-5xl px-4">
+      <section className="pb-10 pt-14">
+        <h1 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight">
+          OpenPorts watches your domains from the outside and reports what
+          they expose.
         </h1>
-        <p className="mt-4 max-w-2xl text-muted">
-          OpenPorts watches your domains from the outside: which ports answer,
-          when the TLS certificate expires, whether anyone can send mail as
-          you, and what your headers admit to.
+        <p className="mt-4 max-w-2xl text-lg text-muted">
+          Open ports, a TLS certificate on its way out, mail records that let
+          anyone spoof you, headers that give away the stack. Every finding
+          comes with the fix, written out.
         </p>
-        <div className="mt-6 flex items-center gap-5">
-          <Link
-            href="/app"
-            className="rounded border border-accent/50 bg-accent/10 px-4 py-2 font-mono text-sm text-accent hover:bg-accent/20"
-          >
-            scan your first domain
+        <div className="mt-6 flex flex-wrap items-center gap-5">
+          <Link href="/app" className={btn}>
+            add a domain
           </Link>
           <a
             href="https://github.com/xenoaitham/openports"
             className="text-sm text-muted hover:text-ink"
           >
-            devlog
+            read the devlog
           </a>
         </div>
       </section>
 
-      <section>
-        <figure className="rounded border border-line bg-panel p-2">
-          <img
-            src="/report-sample.png"
-            alt="OpenPorts report for scanme.nmap.org: one unexpected open port, no SPF record, no DMARC record"
-            className="w-full rounded-sm"
-          />
-        </figure>
-        <p className="mt-2 font-mono text-xs text-muted">
-          a real report from this build: scanme.nmap.org, 2026-09-18. the nmap
-          project leaves that host open to scanning on purpose. results shift a
-          little between runs, more on that in the devlog.
+      <section className="border-t border-line py-10">
+        <h2 className="text-base font-medium">A report from this instance</h2>
+        {report ? (
+          <>
+            <p className="mt-1 text-sm text-muted">
+              {report.domain}, finished {timeAgo(report.finishedAt)}, took{" "}
+              {formatDuration(report.durationMs)}, ports open:{" "}
+              <span className="font-mono text-xs text-ink">
+                {report.openPorts.join(", ") || "none"}
+              </span>
+              . The Nmap project runs that host for scanner testing, so it is
+              scanned without the ownership record. Nothing on this page is
+              staged.
+            </p>
+            <div className="mt-4">
+              <FindingsList findings={report.findings} />
+            </div>
+          </>
+        ) : (
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            No scan has finished on this instance yet. Run{" "}
+            <code className="font-mono text-xs text-ink">npm run seed</code>{" "}
+            to scan scanme.nmap.org for real, or add a domain under targets:
+            the latest report then shows up here.
+          </p>
+        )}
+      </section>
+
+      <section className="border-t border-line py-10">
+        <h2 className="text-base font-medium">How a scan gets allowed</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          Adding a domain never triggers a scan by itself. You prove
+          ownership with one DNS record, and the worker rechecks that record
+          before it touches the network:
+        </p>
+        <div className="mt-4 border-b border-t border-line py-3 font-mono text-sm">
+          <span className="text-ink">_openports.your-domain.com</span>
+          <span className="ml-4 text-muted">TXT</span>
+          <span className="ml-4 text-muted">
+            &quot;openports-verify=1f3a9c0d44e2b68a07c5d9e1f4b83a26&quot;
+          </span>
+        </div>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          The value is generated when you add the domain, that line shows the
+          shape. The single exception is scanme.nmap.org, which the Nmap
+          project runs for scanner testing.
         </p>
       </section>
 
-      <section className="py-10">
-        <h2 className="text-sm font-medium text-ink">How it works</h2>
-        <div className="mt-3 max-w-2xl space-y-3 text-sm text-muted">
-          <p>
-            You add a domain. It gets resolved once, mostly to say no: anything
-            pointing into private address space is rejected before it is even
-            stored.
-          </p>
-          <p>
-            You prove the domain is yours by publishing one TXT record at{" "}
-            <code className="font-mono text-xs text-ink">
-              _openports.your-domain.com
-            </code>
-            . Nothing is port scanned before that record checks out. The single
-            exception is scanme.nmap.org, which the nmap project runs for
-            scanner testing.
-          </p>
-          <p>
-            Then it sweeps the 100 ports most likely to be open, reads the
-            certificate on 443, checks SPF, DMARC and MX, and looks at the
-            headers on the main host. Every finding ships with a fix in plain
-            sentences, not a link to a blog post.
-          </p>
-        </div>
+      <section className="border-t border-line py-10">
+        <h2 className="text-base font-medium">What a scan reads</h2>
+        <table className="mt-4 w-full max-w-3xl border-collapse text-sm">
+          <tbody>
+            {(
+              [
+                [
+                  "TCP sweep",
+                  "the 100 ports most likely to be open, plain connect, nothing sent, no service probing",
+                  "remote access port exposed, unexpected open port",
+                ],
+                [
+                  "TLS on 443",
+                  "certificate subject, issuer and expiry date",
+                  "expired, or expiring in under 30 days",
+                ],
+                [
+                  "DNS",
+                  "SPF, DMARC and MX records",
+                  "missing SPF, missing DMARC, DMARC in monitoring mode",
+                ],
+                [
+                  "HTTP",
+                  "HSTS header, the http to https redirect, Server banner",
+                  "missing HSTS, no redirect, banner disclosure",
+                ],
+              ] as const
+            ).map(([check, method, findings]) => (
+              <tr key={check} className="border-b border-line">
+                <th
+                  scope="row"
+                  className="w-28 py-2 pr-4 text-left align-top font-normal text-ink"
+                >
+                  {check}
+                </th>
+                <td className="py-2 pr-6 align-top text-muted">{method}</td>
+                <td className="py-2 align-top text-muted">{findings}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
-      <section className="border-t border-line py-8">
-        <h2 className="text-sm font-medium text-ink">Limits</h2>
+      <section className="border-t border-line py-10">
+        <h2 className="text-base font-medium">Limits, stated plainly</h2>
         <ul className="mt-3 max-w-2xl list-disc space-y-2 pl-5 text-sm text-muted">
-          <li>No accounts yet. Anyone with the URL sees every target here.</li>
           <li>
-            This is a monitor, not an attack tool. It completes TCP handshakes
-            and reads what servers volunteer. It never exploits anything.
+            There are no accounts. Anything added to this instance is visible
+            to everyone holding the URL.
           </li>
           <li>
-            One process, one SQLite file, one scan at a time. Deliberate, until
-            the boring way stops working.
+            The scanner is a monitor, not an attack tool. It completes TCP
+            handshakes and reads what servers volunteer. It never exploits
+            anything.
+          </li>
+          <li>
+            One process, one SQLite file. That is deliberate until the boring
+            way stops working.
           </li>
         </ul>
       </section>

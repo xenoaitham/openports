@@ -17,29 +17,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col">
         <header className="border-b border-line">
-          <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
-            <Link
-              href="/"
-              className="font-mono text-sm tracking-tight text-ink hover:text-accent"
-            >
-              openports<span className="text-accent">_</span>
+          <div className="mx-auto max-w-5xl px-4 h-12 flex items-center justify-between">
+            <Link href="/" className="text-sm font-medium text-ink">
+              openports
             </Link>
             <nav className="flex items-center gap-5 text-sm">
               <Link href="/app" className="text-muted hover:text-ink">
                 targets
               </Link>
-              <Link
+              <a
                 href="https://github.com/xenoaitham/openports"
                 className="text-muted hover:text-ink"
               >
                 devlog
-              </Link>
+              </a>
             </nav>
           </div>
         </header>
         <div className="flex-1">{children}</div>
         <footer className="border-t border-line">
-          <div className="mx-auto max-w-5xl px-4 h-12 flex items-center text-xs text-muted font-mono">
+          <div className="mx-auto max-w-5xl px-4 h-11 flex items-center text-xs text-muted">
             no accounts yet, one sqlite file, scans only after TXT verification
           </div>
         </footer>

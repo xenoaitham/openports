@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { findings, scans, targets } from "@/db/schema";
+import { severityRank } from "./catalog";
 import { isPreallowed, normalizeDomain, resolvePublicHost } from "./host";
 import { generateToken, checkTxtRecord } from "./verify";
 import { enqueueScan } from "./worker";
@@ -188,6 +189,10 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
       }
       return { id: f.id, type: f.type, severity: f.severity, evidence };
     });
+    // worst first: the report reads top down
+    findingViews.sort(
+      (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
+    );
     if (latestDone.result) {
       try {
         rawResult = JSON.parse(latestDone.result) as ScanResult;
@@ -258,4 +263,54 @@ export async function listTargetOverviews(): Promise<TargetOverview[]> {
 
 export async function getTargetDetailJson(id: number): Promise<TargetDetail | null> {
   return getTargetDetail(id);
+}
+
+// the latest finished scan on this instance, for the landing page. real data
+// or nothing: when no scan has run yet the landing says so instead of
+// decorating.
+export interface LandingReport {
+  domain: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  openPorts: number[];
+  findings: FindingView[];
+}
+
+export async function getLandingReport(): Promise<LandingReport | null> {
+  const [row] = await db
+    .select({ scan: scans, domain: targets.domain })
+    .from(scans)
+    .innerJoin(targets, eq(scans.targetId, targets.id))
+    .where(eq(scans.status, "done"))
+    .orderBy(desc(scans.id))
+    .limit(1);
+  if (!row) return null;
+
+  const findingRows = await db
+    .select()
+    .from(findings)
+    .where(eq(findings.scanId, row.scan.id));
+  const reportFindings: FindingView[] = findingRows.map((f) => {
+    let evidence: Record<string, unknown> = {};
+    try {
+      evidence = f.evidence ? (JSON.parse(f.evidence) as Record<string, unknown>) : {};
+    } catch {
+      evidence = {};
+    }
+    return { id: f.id, type: f.type, severity: f.severity, evidence };
+  });
+  reportFindings.sort(
+    (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
+  );
+
+  return {
+    domain: row.domain,
+    finishedAt: row.scan.finishedAt ? row.scan.finishedAt.toISOString() : null,
+    durationMs:
+      row.scan.startedAt && row.scan.finishedAt
+        ? row.scan.finishedAt.getTime() - row.scan.startedAt.getTime()
+        : null,
+    openPorts: parsePorts(row.scan.result),
+    findings: reportFindings,
+  };
 }

@@ -41,17 +41,17 @@ export default function AddTargetForm() {
         aria-label="domain to watch"
         autoComplete="off"
         spellCheck={false}
-        className="w-72 rounded border border-line bg-panel px-3 py-2 font-mono text-sm text-ink placeholder:text-muted/50 focus:border-accent focus:outline-none"
+        className="w-72 border border-linestrong bg-paper px-2.5 py-1.5 font-mono text-sm text-ink placeholder:text-muted/60 focus:border-ink focus:outline-none"
       />
       <button
         type="submit"
         disabled={busy || !domain.trim()}
-        className="rounded border border-accent/50 bg-accent/10 px-4 py-2 font-mono text-sm text-accent hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-40"
+        className="border border-ink px-3.5 py-1.5 text-sm text-ink hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? "adding..." : "add target"}
       </button>
       {error && (
-        <span className="font-mono text-sm text-high" role="alert">
+        <span className="text-sm text-high" role="alert">
           {error}
         </span>
       )}

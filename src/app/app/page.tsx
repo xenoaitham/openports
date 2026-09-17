@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import AddTargetForm from "@/components/add-target-form";
-import { ScanStatusBadge, TargetStatusBadge } from "@/components/badges";
+import { ScanStatusWord, TargetStatusWord } from "@/components/words";
 import { listTargetOverviews } from "@/lib/queries";
 import { timeAgo } from "@/lib/format";
+import type { TargetOverview } from "@/lib/view-types";
 
 export const metadata: Metadata = {
   title: "Targets",
@@ -17,7 +18,7 @@ export default async function AppPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="font-mono text-xl text-ink">Targets</h1>
+      <h1 className="text-2xl font-medium tracking-tight">Targets</h1>
       <p className="mt-1 text-sm text-muted">
         Add a domain. It gets scanned after you prove ownership with one DNS
         record, never before.
@@ -26,22 +27,19 @@ export default async function AppPage() {
       <AddTargetForm />
 
       {targets.length === 0 ? (
-        <div className="mt-10 rounded border border-dashed border-line p-10 text-center">
-          <p className="font-mono text-sm text-ink">no targets yet</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            Add a domain above. You will get one TXT record to publish, and the
-            first scan starts once it checks out.
-          </p>
-        </div>
+        <p className="mt-10 max-w-2xl text-sm text-muted">
+          No targets yet. Add a domain above and you get one TXT record to
+          publish; the first scan starts once it checks out.
+        </p>
       ) : (
-        <table className="mt-10 w-full border-collapse text-sm">
+        <table className="mt-8 w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-line text-left">
+            <tr className="border-b border-linestrong text-left">
               {["domain", "status", "last scan", "open ports", "findings"].map(
                 (name) => (
                   <th
                     key={name}
-                    className="py-2 pr-6 font-mono text-[11px] font-normal uppercase tracking-wide text-muted"
+                    className="py-2 pr-6 text-xs font-normal text-muted"
                   >
                     {name}
                   </th>
@@ -51,39 +49,36 @@ export default async function AppPage() {
           </thead>
           <tbody>
             {targets.map((target) => (
-              <tr key={target.id} className="border-b border-line/60">
-                <td className="py-3 pr-6">
+              <tr key={target.id} className="border-b border-line">
+                <td className="py-2.5 pr-6">
                   <a
                     href={`/targets/${target.id}`}
-                    className="font-mono text-ink hover:text-accent"
+                    className="font-mono text-[13px] text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
                   >
                     {target.domain}
                   </a>
                 </td>
-                <td className="py-3 pr-6">
-                  <TargetStatusBadge status={target.status} />
+                <td className="py-2.5 pr-6">
+                  <TargetStatusWord status={target.status} />
                 </td>
-                <td className="py-3 pr-6">
+                <td className="py-2.5 pr-6">
                   {target.lastScan ? (
-                    <span className="flex items-center gap-2">
-                      <ScanStatusBadge status={target.lastScan.status} />
+                    <span className="flex items-baseline gap-3">
+                      <ScanStatusWord status={target.lastScan.status} />
                       <span className="font-mono text-xs text-muted">
-                        {timeAgo(
-                          target.lastScan.finishedAt ??
-                            target.lastScan.startedAt,
-                        )}
+                        {lastScanTime(target)}
                       </span>
                     </span>
                   ) : (
-                    <span className="font-mono text-xs text-muted">never</span>
+                    <span className="text-muted">never</span>
                   )}
                 </td>
-                <td className="py-3 pr-6 font-mono text-xs text-muted">
+                <td className="py-2.5 pr-6 font-mono text-xs text-muted">
                   {target.openPorts.length > 0
                     ? target.openPorts.join(", ")
                     : "-"}
                 </td>
-                <td className="py-3 pr-6">
+                <td className="py-2.5 pr-6">
                   <Counts
                     counts={target.counts}
                     showClean={target.lastScan?.status === "done"}
@@ -96,6 +91,20 @@ export default async function AppPage() {
       )}
     </main>
   );
+}
+
+function lastScanTime(target: TargetOverview): string {
+  if (!target.lastScan) return "never";
+  if (
+    target.lastScan.status === "done" ||
+    target.lastScan.status === "failed"
+  ) {
+    return timeAgo(target.lastScan.finishedAt ?? target.lastScan.startedAt);
+  }
+  // queued and running scans have no finish yet: say when they started
+  return target.lastScan.startedAt
+    ? `started ${timeAgo(target.lastScan.startedAt)}`
+    : "";
 }
 
 function Counts({
@@ -114,9 +123,9 @@ function Counts({
   const active = entries.filter(([, n]) => n > 0);
   if (active.length === 0) {
     return showClean ? (
-      <span className="font-mono text-xs text-accent">clean</span>
+      <span className="text-xs text-muted">clean</span>
     ) : (
-      <span className="font-mono text-xs text-muted">-</span>
+      <span className="text-xs text-muted">-</span>
     );
   }
   return (

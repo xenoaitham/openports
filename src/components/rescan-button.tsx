@@ -24,7 +24,7 @@ export default function RescanButton({ id }: { id: number }) {
       type="button"
       onClick={rescan}
       disabled={busy}
-      className="rounded border border-line bg-raise px-3 py-1.5 font-mono text-xs text-ink hover:border-accent disabled:opacity-50"
+      className="border border-ink px-3 py-1.5 text-sm text-ink hover:bg-ink hover:text-paper disabled:cursor-wait disabled:opacity-50"
     >
       {busy ? "queueing..." : "run scan again"}
     </button>
