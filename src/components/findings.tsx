@@ -19,7 +19,7 @@ export default function FindingsList({ findings }: { findings: FindingView[] }) 
       severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
   );
   return (
-    <ul className="mt-3 divide-y divide-line border-b border-t border-line">
+    <ul className="mt-3 max-w-3xl divide-y divide-line border-b border-t border-line">
       {sorted.map((finding) => (
         <FindingItem key={finding.id} finding={finding} />
       ))}

@@ -52,20 +52,24 @@ export default async function AppPage() {
           <tbody>
             {targets.map((target) => (
               <tr key={target.id} className="border-b border-line">
-                <td className="py-2.5 pr-6">
+                <td className="py-2 pr-6">
                   <a
                     href={`/targets/${target.id}`}
-                    className="font-mono text-[13px] text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
+                    className="font-mono text-sm text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
                   >
                     {target.domain}
                   </a>
                 </td>
-                <td className="py-2.5 pr-6">
+                <td className="py-2 pr-6">
                   <TargetStatusWord status={target.status} />
                 </td>
-                <td className="py-2.5 pr-6">
+                <td className="py-2 pr-6">
                   {target.lastScan ? (
-                    <span className="flex items-baseline gap-3">
+                    <span
+                      className="flex items-baseline gap-3"
+                      // relative time is a snapshot printed at render time
+                      suppressHydrationWarning
+                    >
                       <ScanStatusWord status={target.lastScan.status} />
                       <span className="font-mono text-xs text-muted">
                         {lastScanTime(target)}
@@ -75,12 +79,12 @@ export default async function AppPage() {
                     <span className="text-muted">never</span>
                   )}
                 </td>
-                <td className="py-2.5 pr-6 font-mono text-xs text-muted">
+                <td className="py-2 pr-6 font-mono text-xs text-muted">
                   {target.openPorts.length > 0
                     ? target.openPorts.join(", ")
                     : "-"}
                 </td>
-                <td className="py-2.5 pr-6">
+                <td className="py-2 pr-6">
                   <Counts
                     counts={target.counts}
                     showClean={target.lastScan?.status === "done"}

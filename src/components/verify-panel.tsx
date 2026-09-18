@@ -33,7 +33,7 @@ export default function VerifyPanel({ target }: { target: TargetView }) {
   }
 
   const btn =
-    "inline-block border border-ink px-3.5 py-2 text-sm text-ink hover:bg-ink hover:text-paper disabled:cursor-wait disabled:opacity-60";
+    "inline-block border border-ink px-3.5 py-1.5 text-sm text-ink hover:bg-ink hover:text-paper disabled:cursor-wait disabled:opacity-60";
 
   return (
     <section aria-live="polite">
@@ -44,14 +44,14 @@ export default function VerifyPanel({ target }: { target: TargetView }) {
       </p>
 
       <dl className="mt-4 max-w-3xl">
-        <div className="flex items-baseline gap-4 border-b border-line py-2.5">
+        <div className="flex items-baseline gap-4 border-b border-line py-2">
           <dt className="w-28 shrink-0 text-xs text-muted">record name</dt>
           <dd className="min-w-0 flex-1 break-all font-mono text-sm text-ink">
             {txtName}
           </dd>
           <CopyButton value={txtName} />
         </div>
-        <div className="flex items-baseline gap-4 border-b border-line py-2.5">
+        <div className="flex items-baseline gap-4 border-b border-line py-2">
           <dt className="w-28 shrink-0 text-xs text-muted">record value</dt>
           <dd className="min-w-0 flex-1 break-all font-mono text-sm text-ink">
             {target.verifyToken}
@@ -71,7 +71,7 @@ export default function VerifyPanel({ target }: { target: TargetView }) {
       </div>
 
       {error && (
-        <p className="mt-3 text-sm text-high" role="alert">
+        <p className="mt-3 text-sm text-ink" role="alert">
           last check failed: {error}
         </p>
       )}

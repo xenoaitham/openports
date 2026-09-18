@@ -133,13 +133,9 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
               : "The first scan starts as soon as the TXT record checks out."}
           </p>
         ) : latest.status === "queued" ? (
-          <p className="mt-2 text-sm text-medium">
-            <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-medium align-middle" />
-            queued, starting shortly
-          </p>
+          <p className="mt-2 text-sm text-medium">queued, starting shortly</p>
         ) : latest.status === "running" ? (
           <p className="mt-2 text-sm text-medium">
-            <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-medium align-middle" />
             running: sweeping 100 ports, then TLS, DNS and HTTP checks
           </p>
         ) : latest.status === "failed" ? (
@@ -155,7 +151,12 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
         ) : (
           <>
             {rawResult && <ScanResultTable result={rawResult} />}
-            <p className="mt-2 text-xs text-muted">
+            <p
+              className="mt-2 text-xs text-muted"
+              // relative time is a snapshot printed at render time; the
+              // client clock may have ticked past the server one
+              suppressHydrationWarning
+            >
               finished {timeAgo(latest.finishedAt)}, took{" "}
               {formatDuration(latest.durationMs)}, started{" "}
               {formatDateTime(latest.startedAt)}

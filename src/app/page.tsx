@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 const btn =
-  "inline-block border border-ink px-3.5 py-2 text-sm text-ink hover:bg-ink hover:text-paper";
+  "inline-block border border-ink px-3.5 py-1.5 text-sm text-ink hover:bg-ink hover:text-paper";
 
 export default async function Home() {
   const report = await getLandingReport();
@@ -41,7 +41,11 @@ export default async function Home() {
         <h2 className="text-base font-medium">A report from this instance</h2>
         {report ? (
           <>
-            <p className="mt-1 text-sm text-muted">
+            <p
+              className="mt-1 max-w-3xl text-sm text-muted"
+              // relative time is a snapshot printed at render time
+              suppressHydrationWarning
+            >
               {report.domain}, finished {timeAgo(report.finishedAt)}, took{" "}
               {formatDuration(report.durationMs)}, ports open:{" "}
               <span className="font-mono text-xs text-ink">

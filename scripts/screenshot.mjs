@@ -27,6 +27,8 @@ page.on("console", (msg) => {
 page.on("pageerror", (err) => errors.push(`${page.url()}: ${err.message}`));
 
 async function shot(name) {
+  // park the cursor so a hover state never bleeds into a capture
+  await page.mouse.move(0, 0);
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/${name}.png` });
   console.log(`captured ${name}`);
@@ -79,10 +81,12 @@ await page
   .first()
   .waitFor({ timeout: 90_000 });
 
-// one more scan so the history table has real rows
+// one more scan so the history table has real rows. wait for the queued or
+// running sentence first: "finished N ago" is already on the page right
+// after the click, so a bare wait for it would match stale content
 await page.getByRole("button", { name: "run scan again" }).click();
 await page
-  .getByText(/finished \d|scan failed:|running: sweeping/)
+  .getByText(/queued, starting shortly|running: sweeping/)
   .first()
   .waitFor({ timeout: 20_000 });
 await page.getByText(/finished \d/).first().waitFor({ timeout: 90_000 });

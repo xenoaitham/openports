@@ -20,6 +20,8 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  /* digits line up in tables even where they render in the sans face */
+  font-variant-numeric: tabular-nums;
 }
 
 ::selection {
