@@ -59,4 +59,7 @@ export interface TargetOverview {
   lastScan: ScanSummary | null;
   counts: { high: number; medium: number; low: number; info: number };
   openPorts: number[];
+  // when the newest stored diff that recorded a change finished; null when
+  // no stored diff has recorded one yet
+  lastChangeAt: string | null;
 }

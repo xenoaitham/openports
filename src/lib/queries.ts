@@ -1,10 +1,11 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { findings, scans, targets } from "@/db/schema";
 import { severityRank } from "./catalog";
 import {
   changesForScans,
   diffIsEmpty,
+  storedDiffHasChanges,
 } from "./diff";
 import { isPreallowed, normalizeDomain, resolvePublicHost } from "./host";
 import { generateToken, checkTxtRecord } from "./verify";
@@ -240,6 +241,16 @@ export async function listTargetOverviews(): Promise<TargetOverview[]> {
       for (const r of rows) counts[r.severity] += 1;
     }
 
+    // when this target last changed, straight off the stored audit trail.
+    // the walk back is bounded; beyond it the column falls back to "-"
+    const diffRows = await db
+      .select({ finishedAt: scans.finishedAt, diff: scans.diff })
+      .from(scans)
+      .where(and(eq(scans.targetId, t.id), isNotNull(scans.diff)))
+      .orderBy(desc(scans.id))
+      .limit(500);
+    const lastChange = diffRows.find((r) => storedDiffHasChanges(r.diff));
+
     out.push({
       id: t.id,
       domain: t.domain,
@@ -258,6 +269,9 @@ export async function listTargetOverviews(): Promise<TargetOverview[]> {
         : null,
       counts,
       openPorts: parsePorts(lastDone?.result ?? lastScan?.result ?? null),
+      lastChangeAt: lastChange?.finishedAt
+        ? lastChange.finishedAt.toISOString()
+        : null,
     });
   }
   return out;

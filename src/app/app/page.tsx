@@ -41,16 +41,21 @@ export default async function AppPage() {
         <table className="mt-8 w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-linestrong text-left">
-              {["domain", "status", "last scan", "open ports", "findings"].map(
-                (name) => (
-                  <th
-                    key={name}
-                    className="py-2 pr-6 text-xs font-normal text-muted"
-                  >
-                    {name}
-                  </th>
-                ),
-              )}
+              {[
+                "domain",
+                "status",
+                "last scan",
+                "changed",
+                "open ports",
+                "findings",
+              ].map((name) => (
+                <th
+                  key={name}
+                  className="py-2 pr-6 text-xs font-normal text-muted"
+                >
+                  {name}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -82,6 +87,12 @@ export default async function AppPage() {
                   ) : (
                     <span className="text-muted">never</span>
                   )}
+                </td>
+                <td
+                  className="py-2 pr-6 font-mono text-xs text-muted"
+                  suppressHydrationWarning
+                >
+                  {target.lastChangeAt ? timeAgo(target.lastChangeAt) : "-"}
                 </td>
                 <td className="py-2 pr-6 font-mono text-xs text-muted">
                   {target.openPorts.length > 0
