@@ -3,7 +3,7 @@ import tls from "node:tls";
 import { promises as dns } from "node:dns";
 import { TOP_PORTS } from "./ports";
 import { resolvePublicHost } from "./host";
-import { grabAllBanners } from "./banners";
+import { grabAllBanners, rejectReason, TLS_PORTS } from "./banners";
 import type { HttpResult, ScanResult, TlsResult } from "./scan-types";
 
 const CONNECT_TIMEOUT_MS = 1500;
@@ -74,24 +74,24 @@ async function sweepPorts(host: string): Promise<{
   };
 }
 
-// constraint: this is a certificate auditor. it has to be able to read
-// expired, self-signed and mismatched certificates, because reporting them
-// is the point (see tls_cert_expired in the catalog). no credentials or user
-// data cross this connection, the host is resolved through resolvePublicHost
-// first, and the socket is closed right after the handshake.
-const ALLOW_UNTRUSTED_CERTS_FOR_INSPECTION = false;
-
-function checkTls(host: string): Promise<TlsResult> {
+// certificate validation stays on, everywhere. this is a certificate
+// auditor: a self-signed, expired or mismatched certificate is exactly the
+// thing to report, so a rejected handshake is the finding, not a problem to
+// route around (the recorded decision on reading untrusted certs). the
+// connection goes to the resolved address but the server name is the
+// domain, the same thing a browser does, or every name check would fail
+// for the wrong reason. no credentials or user data cross this connection,
+// and the socket closes right after the handshake.
+function checkTls(
+  host: string,
+  port: number,
+  servername: string,
+): Promise<TlsResult> {
   return new Promise((resolve) => {
-    const socket = tls.connect({
-      host,
-      port: 443,
-      servername: host,
-      rejectUnauthorized: ALLOW_UNTRUSTED_CERTS_FOR_INSPECTION,
-    });
+    const socket = tls.connect({ host, port, servername });
     const fail = (error: string) => {
       socket.destroy();
-      resolve({ checked: true, ok: false, error });
+      resolve({ port, checked: true, ok: false, error });
     };
     socket.setTimeout(TLS_TIMEOUT_MS);
     socket.once("secureConnect", () => {
@@ -103,6 +103,7 @@ function checkTls(host: string): Promise<TlsResult> {
         );
         socket.end();
         resolve({
+          port,
           checked: true,
           ok: true,
           issuer:
@@ -119,7 +120,7 @@ function checkTls(host: string): Promise<TlsResult> {
     });
     socket.once("timeout", () => fail("TLS handshake timed out"));
     socket.once("error", (err) =>
-      fail(`TLS handshake failed (${err.code ?? err.message})`),
+      fail(`handshake rejected: ${rejectReason(err as NodeJS.ErrnoException)}`),
     );
   });
 }
@@ -231,15 +232,15 @@ export async function runScanChecks(domain: string): Promise<ScanResult> {
 
   const ports = await sweepPorts(host);
 
-  const tls = ports.open.includes(443)
-    ? await checkTls(host)
-    : { checked: false, ok: false, error: "port 443 is not open" };
-
-  // one short conversation per open port, in parallel with the rest
-  const [dnsResult, http, banners] = await Promise.all([
+  // one certificate check per open TLS port: 443 plus the mail ports. the
+  // socket connects to the resolved address; the server name stays the
+  // domain so the certificate is checked the way a client sees it.
+  const tlsPorts = ports.open.filter((p) => TLS_PORTS.has(p)).sort((a, b) => a - b);
+  const [dnsResult, http, banners, tls] = await Promise.all([
     checkDns(domain),
     checkHttp(domain, ports.open.includes(80)),
-    grabAllBanners(host, ports.open),
+    grabAllBanners(host, ports.open, domain),
+    Promise.all(tlsPorts.map((port) => checkTls(host, port, domain))),
   ]);
 
   return {

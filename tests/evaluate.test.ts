@@ -8,7 +8,7 @@ function baseResult(overrides: Partial<ScanResult> = {}): ScanResult {
     host: "example.com",
     addresses: ["93.184.216.34"],
     ports: { scanned: 100, open: [80, 443], refused: 98, filtered: 0, durationMs: 2000 },
-    tls: { checked: false, ok: false },
+    tls: [],
     dns: {
       spf: "v=spf1 -all",
       dmarc: "v=DMARC1; p=reject;",
@@ -34,13 +34,16 @@ test("a clean scan produces no findings", () => {
 test("expired and expiring certificates are flagged", () => {
   const expired = evaluateScanResult(
     baseResult({
-      tls: {
-        checked: true,
-        ok: true,
-        daysRemaining: -3,
-        validTo: "2020-01-01T00:00:00.000Z",
-        issuer: "Let's Encrypt",
-      },
+      tls: [
+        {
+          port: 443,
+          checked: true,
+          ok: true,
+          daysRemaining: -3,
+          validTo: "2020-01-01T00:00:00.000Z",
+          issuer: "Let's Encrypt",
+        },
+      ],
     }),
   );
   assert.equal(expired.length, 1);
@@ -49,30 +52,83 @@ test("expired and expiring certificates are flagged", () => {
 
   const soon = evaluateScanResult(
     baseResult({
-      tls: {
-        checked: true,
-        ok: true,
-        daysRemaining: 12,
-        validTo: "2026-09-30T00:00:00.000Z",
-        issuer: "Let's Encrypt",
-      },
+      tls: [
+        {
+          port: 443,
+          checked: true,
+          ok: true,
+          daysRemaining: 12,
+          validTo: "2026-09-30T00:00:00.000Z",
+          issuer: "Let's Encrypt",
+        },
+      ],
     }),
   );
   assert.equal(soon[0].type, "tls_cert_expiring_soon");
   assert.equal(soon[0].severity, "medium");
+  assert.equal(soon[0].evidence.port, 443);
 
   // 30 days exactly is still outside the warn window
   const edge = evaluateScanResult(
-    baseResult({ tls: { checked: true, ok: true, daysRemaining: 30 } }),
+    baseResult({ tls: [{ port: 443, checked: true, ok: true, daysRemaining: 30 }] }),
   );
   assert.deepEqual(edge, []);
 });
 
+test("mail port certificates are checked like the web one", () => {
+  const soon = evaluateScanResult(
+    baseResult({
+      ports: { scanned: 100, open: [25, 465, 993], refused: 97, filtered: 0, durationMs: 2000 },
+      tls: [
+        {
+          port: 465,
+          checked: true,
+          ok: true,
+          daysRemaining: 9,
+          validTo: "2026-09-27T00:00:00.000Z",
+          issuer: "Let's Encrypt",
+        },
+      ],
+    }),
+  );
+  const cert = soon.find((f) => f.type === "tls_cert_expiring_soon");
+  assert.equal(cert?.evidence.port, 465);
+});
+
+test("with validation on, the rejection reason is the finding", () => {
+  const cases: [string, string][] = [
+    ["handshake rejected: certificate expired", "tls_cert_expired"],
+    ["handshake rejected: self-signed certificate", "tls_cert_self_signed"],
+    [
+      "handshake rejected: certificate hostname mismatch",
+      "tls_cert_hostname_mismatch",
+    ],
+  ];
+  for (const [error, expected] of cases) {
+    const findings = evaluateScanResult(
+      baseResult({ tls: [{ port: 993, checked: true, ok: false, error }] }),
+    );
+    assert.equal(findings.length, 1, error);
+    assert.equal(findings[0].type, expected);
+    assert.equal(findings[0].evidence.port, 993);
+  }
+});
+
+test("a handshake that failed for connectivity reasons is not a cert finding", () => {
+  const findings = evaluateScanResult(
+    baseResult({
+      tls: [
+        { port: 465, checked: true, ok: false, error: "handshake rejected: TLS handshake timed out" },
+      ],
+    }),
+  );
+  assert.deepEqual(findings, []);
+});
+
 test("no tls at all is not invented into a cert finding", () => {
   const result = baseResult({
-    tls: { checked: false, ok: false, error: "port 443 is not open" },
+    tls: [{ port: 443, checked: false, ok: false, error: "the port was not open" }],
   });
-  assert.ok(!result.tls.checked);
   assert.ok(
     !evaluateScanResult(result).some((f) => f.type.startsWith("tls_")),
   );

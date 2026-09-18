@@ -102,9 +102,9 @@ export default async function Home() {
                   "remote access port exposed, unexpected open port",
                 ],
                 [
-                  "TLS on 443",
-                  "certificate subject, issuer and expiry date",
-                  "expired, or expiring in under 30 days",
+                  "TLS on 443, 465, 993, 995",
+                  "certificate subject, issuer and expiry date on every TLS port that answers, validation left on",
+                  "expired, expiring in under 30 days, self-signed, hostname mismatch",
                 ],
                 [
                   "DNS",

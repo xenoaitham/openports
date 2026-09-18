@@ -8,6 +8,26 @@ import tls from "node:tls";
 
 export const TLS_PORTS = new Set([443, 465, 993, 995]);
 
+// plain reasons for a rejected handshake. validation stays on: a rejected
+// handshake is the finding, not a problem to route around.
+const REJECT_REASONS: [RegExp, string][] = [
+  [/CERT_HAS_EXPIRED/i, "certificate expired"],
+  [/SELF_SIGNED/i, "self-signed certificate"],
+  [/ALTNAME/i, "certificate hostname mismatch"],
+  [
+    /UNABLE_TO_GET_ISSUER|UNABLE_TO_VERIFY|INVALID_CA/i,
+    "unable to verify the certificate chain",
+  ],
+];
+
+export function rejectReason(err: NodeJS.ErrnoException): string {
+  const text = `${err.code ?? ""} ${err.message}`;
+  for (const [pattern, reason] of REJECT_REASONS) {
+    if (pattern.test(text)) return reason;
+  }
+  return err.code ?? err.message;
+}
+
 export interface Banner {
   port: number;
   // read: the service spoke first. http: it answered a GET. tls: certificate
@@ -111,15 +131,21 @@ function readHttpBanner(host: string, port: number): Promise<string | null> {
   });
 }
 
-// TLS ports: certificate validation stays on. a valid cert reports its
-// subject; a self-signed, expired or mismatched one is reported as
-// rejected, which is the more useful answer for a monitoring tool anyway.
-function readTlsLine(host: string, port: number): Promise<string | null> {
+// TLS ports: certificate validation stays on. the socket connects to the
+// resolved address and presents the domain as the server name, the same
+// thing a client does, so a valid cert reads its subject and a self-signed,
+// expired or mismatched one is reported as rejected, which is the more
+// useful answer for a monitoring tool anyway.
+function readTlsLine(
+  host: string,
+  port: number,
+  servername: string,
+): Promise<string | null> {
   return new Promise((resolve) => {
     // no credentials or user data cross this connection, the host is
     // resolved through resolvePublicHost first, and the socket closes right
     // after the handshake.
-    const socket = tls.connect({ host, port, servername: host });
+    const socket = tls.connect({ host, port, servername });
     socket.setTimeout(3000);
     socket.once("secureConnect", () => {
       try {
@@ -137,18 +163,26 @@ function readTlsLine(host: string, port: number): Promise<string | null> {
       resolve(null);
     });
     socket.once("error", (err) =>
-      resolve(`certificate rejected: ${cleanBannerLine(err.message)}`),
+      resolve(
+        `certificate rejected: ${cleanBannerLine(
+          rejectReason(err as NodeJS.ErrnoException),
+        )}`,
+      ),
     );
   });
 }
 
-export async function grabBanner(host: string, port: number): Promise<Banner> {
+export async function grabBanner(
+  host: string,
+  port: number,
+  servername: string,
+): Promise<Banner> {
   const greeting = await readGreeting(host, port);
   if (greeting !== null && cleanBannerLine(greeting) !== "") {
     return { port, kind: "read", line: cleanBannerLine(greeting) };
   }
   if (isTlsPort(port)) {
-    const tlsLine = await readTlsLine(host, port);
+    const tlsLine = await readTlsLine(host, port, servername);
     if (tlsLine) return { port, kind: "tls", line: tlsLine };
   } else {
     const http = await readHttpBanner(host, port);
@@ -160,6 +194,7 @@ export async function grabBanner(host: string, port: number): Promise<Banner> {
 export async function grabAllBanners(
   host: string,
   ports: number[],
+  servername: string,
 ): Promise<Banner[]> {
-  return Promise.all(ports.map((port) => grabBanner(host, port)));
+  return Promise.all(ports.map((port) => grabBanner(host, port, servername)));
 }

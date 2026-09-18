@@ -6,6 +6,8 @@ import type { Severity } from "./types";
 export const FINDING_TYPES = [
   "tls_cert_expired",
   "tls_cert_expiring_soon",
+  "tls_cert_self_signed",
+  "tls_cert_hostname_mismatch",
   "dmarc_missing",
   "dmarc_policy_none",
   "spf_missing",
@@ -33,8 +35,8 @@ export const FINDING_CATALOG: Record<FindingType, CatalogEntry> = {
     severity: "high",
     title: "TLS certificate expired",
     meaning:
-      "The certificate served on port 443 has a not-after date in the past.",
-    why: "Browsers show a full page warning and many API clients refuse to connect outright. It also makes a real interception attempt look identical to a broken site.",
+      "The certificate served on this port has a not-after date in the past, or the handshake rejects it as expired.",
+    why: "Browsers show a full page warning and many API clients refuse to connect outright. It also makes a real interception attempt look identical to a broken site. On a mail port, every connecting client hits the same wall.",
     fix: "Issue a new certificate and deploy it. Let's Encrypt is free. If you already run automated renewal, trigger it manually once and check its timer, because it clearly did not fire.",
   },
   tls_cert_expiring_soon: {
@@ -42,9 +44,27 @@ export const FINDING_CATALOG: Record<FindingType, CatalogEntry> = {
     severity: "medium",
     title: "TLS certificate expires in under 30 days",
     meaning:
-      "The certificate on port 443 is still valid but its expiry date is less than 30 days away.",
-    why: "When it lapses, the site goes from trusted to warning page with no other change. Certificate expiry is the most common self-inflicted outage on small sites.",
+      "The certificate on this port is still valid but its expiry date is less than 30 days away.",
+    why: "When it lapses, the service goes from trusted to warning page with no other change. Certificate expiry is the most common self-inflicted outage on small sites and mail servers.",
     fix: "Renew now, then make sure renewal is automated and actually runs. With certbot, run certbot renew --dry-run to test the whole path.",
+  },
+  tls_cert_self_signed: {
+    type: "tls_cert_self_signed",
+    severity: "medium",
+    title: "Self-signed certificate",
+    meaning:
+      "The handshake on this port succeeds only because the certificate was signed by itself, so validation is off by definition.",
+    why: "Nothing proves the server is who it claims to be. Standard clients either refuse the connection or train their users to click through warnings, which is worse. On a mail server, other mail servers may refuse delivery over it.",
+    fix: "Issue a publicly trusted certificate for the mail hostname and deploy it. Let's Encrypt works for mail ports; the DNS-01 challenge covers hosts that must stay unadvertised.",
+  },
+  tls_cert_hostname_mismatch: {
+    type: "tls_cert_hostname_mismatch",
+    severity: "medium",
+    title: "Certificate hostname mismatch",
+    meaning:
+      "The certificate served on this port is valid but was issued for a different name than the one this host is reached under.",
+    why: "Every verifying client sees the same thing an attacker with a wrong certificate would show, so the certificate is worth nothing here. This is usually a server configured under one name and advertised under another.",
+    fix: "Issue a certificate for the name this service is actually reached under, or point the service at the name the certificate already covers.",
   },
   dmarc_missing: {
     type: "dmarc_missing",

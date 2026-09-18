@@ -1,10 +1,16 @@
-import type { ScanResult, TlsResult, HttpResult } from "@/lib/scan-types";
+import type {
+  HttpResult,
+  ScanResult,
+  TlsResult,
+} from "@/lib/scan-types";
+import { tlsResultsOf } from "@/lib/scan-types";
 import { formatDuration } from "@/lib/format";
 
 // the full scan result as one table. this is the interface, not a summary
 // of it: everything the scanner learned, in the order it learned it.
 export default function ScanResultTable({ result }: { result: ScanResult }) {
   const bannerLines = (result.banners ?? []).map((b) => `${b.port}: ${b.line}`);
+  const tlsChecks = tlsResultsOf(result);
   const rows: [string, string][] = [
     ["resolved", result.addresses.join(", ")],
     [
@@ -15,7 +21,9 @@ export default function ScanResultTable({ result }: { result: ScanResult }) {
     ],
     ["ports open", result.ports.open.join(", ") || "none"],
     ...(bannerLines.length > 0 ? [["services", bannerLines.join("\n")] as [string, string]] : []),
-    ["tls 443", tlsRow(result.tls)],
+    ...(tlsChecks.length > 0
+      ? tlsChecks.map((t): [string, string] => [`tls ${t.port}`, tlsRow(t)])
+      : [["tls", "no tls port open (443, 465, 993, 995)"] as [string, string]]),
     ["spf", result.dns.spf ?? "absent"],
     ["dmarc", result.dns.dmarc ?? "absent"],
     ["mx", mxRow(result.dns.mx, result.dns.mxError)],
@@ -44,8 +52,10 @@ export default function ScanResultTable({ result }: { result: ScanResult }) {
 }
 
 function tlsRow(tls: TlsResult): string {
-  if (!tls.checked) return `not checked: ${tls.error ?? "port 443 was not open"}`;
-  if (!tls.ok) return `handshake failed: ${tls.error}`;
+  if (!tls.ok) {
+    if (!tls.checked) return `not checked: ${tls.error ?? "the port was not open"}`;
+    return tls.error ?? "handshake failed";
+  }
   const days =
     typeof tls.daysRemaining === "number" ? ` (${tls.daysRemaining} days left)` : "";
   return `subject ${tls.subject}, issued by ${tls.issuer}, expires ${

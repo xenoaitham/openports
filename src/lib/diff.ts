@@ -1,4 +1,4 @@
-import type { ScanResult } from "./scan-types";
+import { tlsResultsOf, type ScanResult } from "./scan-types";
 
 // scan diff: what changed between the previous done scan and this one.
 // pure functions, same input, same output, no database, no network.
@@ -8,7 +8,7 @@ export interface ScanDiff {
   portsClosed: { port: number; confirmed: boolean }[];
   findingsNew: { type: string; confirmed: boolean }[];
   findingsResolved: { type: string; confirmed: boolean }[];
-  certExpiryChanged: { from: string; to: string } | null;
+  certExpiryChanged: { port: number; from: string; to: string }[];
 }
 
 export interface DiffInput {
@@ -32,14 +32,24 @@ function rawDiff(prev: DiffInput, current: DiffInput): ScanDiff {
   const prevTypes = new Set(prev.findingTypes);
   const curTypes = new Set(current.findingTypes);
 
-  const certExpiryChanged = (() => {
-    const from = prev.result?.tls?.validTo;
-    const to = current.result?.tls?.validTo;
-    // a renewal shows up as a new expiry date. missing certs on either side
-    // are not a change, they are a hole in the data.
-    if (!from || !to || from === to) return null;
-    return { from, to };
-  })();
+  // a renewal shows up as a new expiry date on the same port. missing certs
+  // on either side are not a change, they are a hole in the data.
+  const prevCerts = new Map(
+    tlsResultsOf(prev.result)
+      .filter((t) => t.validTo)
+      .map((t) => [t.port, t.validTo as string]),
+  );
+  const certExpiryChanged = tlsResultsOf(current.result)
+    .filter((t) => {
+      const from = prevCerts.get(t.port);
+      return t.validTo && from && from !== t.validTo;
+    })
+    .map((t) => ({
+      port: t.port,
+      from: prevCerts.get(t.port) as string,
+      to: t.validTo as string,
+    }))
+    .sort((a, b) => a.port - b.port);
 
   return {
     portsOpened: [...curPorts]
@@ -107,6 +117,6 @@ export function diffIsEmpty(diff: ScanDiff): boolean {
     diff.portsClosed.length === 0 &&
     diff.findingsNew.length === 0 &&
     diff.findingsResolved.length === 0 &&
-    diff.certExpiryChanged === null
+    diff.certExpiryChanged.length === 0
   );
 }

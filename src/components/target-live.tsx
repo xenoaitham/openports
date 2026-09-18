@@ -26,9 +26,9 @@ function ChangesBlock({ since, diff }: { since: string | null; diff: ScanDiff })
   for (const it of diff.findingsResolved) {
     lines.push(`finding resolved: ${getCatalogEntry(it.type)?.title ?? it.type}`);
   }
-  if (diff.certExpiryChanged) {
+  for (const it of diff.certExpiryChanged) {
     lines.push(
-      `certificate expiry changed: ${diff.certExpiryChanged.from.slice(0, 10)} to ${diff.certExpiryChanged.to.slice(0, 10)}`,
+      `certificate expiry changed on port ${it.port}: ${it.from.slice(0, 10)} to ${it.to.slice(0, 10)}`,
     );
   }
 

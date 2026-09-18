@@ -1,5 +1,5 @@
 import { FINDING_CATALOG, severityRank } from "./catalog";
-import type { ScanResult } from "./scan-types";
+import { tlsResultsOf, type ScanResult } from "./scan-types";
 import type { Severity } from "./types";
 
 export interface DerivedFinding {
@@ -30,23 +30,52 @@ function bannerLinesFor(r: ScanResult, ports: number[]): string[] {
 export function evaluateScanResult(r: ScanResult): DerivedFinding[] {
   const out: DerivedFinding[] = [];
 
-  if (r.tls.checked && r.tls.ok && typeof r.tls.daysRemaining === "number") {
-    if (r.tls.daysRemaining <= 0) {
-      out.push({
-        type: "tls_cert_expired",
-        severity: FINDING_CATALOG.tls_cert_expired.severity,
-        evidence: { issuer: r.tls.issuer, validTo: r.tls.validTo },
-      });
-    } else if (r.tls.daysRemaining < CERT_EXPIRY_WARN_DAYS) {
-      out.push({
-        type: "tls_cert_expiring_soon",
-        severity: FINDING_CATALOG.tls_cert_expiring_soon.severity,
-        evidence: {
-          issuer: r.tls.issuer,
-          validTo: r.tls.validTo,
-          daysRemaining: r.tls.daysRemaining,
-        },
-      });
+  // one finding per failing certificate check, from the shared catalog. with
+  // validation left on, an expired or self-signed certificate never completes
+  // the handshake, so the rejection reason is the finding's evidence. a
+  // handshake that fails for connectivity reasons (timeout, refused) is not a
+  // certificate finding.
+  for (const t of tlsResultsOf(r)) {
+    const evidence = { port: t.port };
+    if (t.checked && t.ok && typeof t.daysRemaining === "number") {
+      if (t.daysRemaining <= 0) {
+        out.push({
+          type: "tls_cert_expired",
+          severity: FINDING_CATALOG.tls_cert_expired.severity,
+          evidence: { ...evidence, issuer: t.issuer, validTo: t.validTo },
+        });
+      } else if (t.daysRemaining < CERT_EXPIRY_WARN_DAYS) {
+        out.push({
+          type: "tls_cert_expiring_soon",
+          severity: FINDING_CATALOG.tls_cert_expiring_soon.severity,
+          evidence: {
+            ...evidence,
+            issuer: t.issuer,
+            validTo: t.validTo,
+            daysRemaining: t.daysRemaining,
+          },
+        });
+      }
+    } else if (t.checked && !t.ok && t.error) {
+      if (t.error.includes("certificate expired")) {
+        out.push({
+          type: "tls_cert_expired",
+          severity: FINDING_CATALOG.tls_cert_expired.severity,
+          evidence: { ...evidence, error: t.error },
+        });
+      } else if (t.error.includes("self-signed")) {
+        out.push({
+          type: "tls_cert_self_signed",
+          severity: FINDING_CATALOG.tls_cert_self_signed.severity,
+          evidence: { ...evidence, error: t.error },
+        });
+      } else if (t.error.includes("hostname mismatch")) {
+        out.push({
+          type: "tls_cert_hostname_mismatch",
+          severity: FINDING_CATALOG.tls_cert_hostname_mismatch.severity,
+          evidence: { ...evidence, error: t.error },
+        });
+      }
     }
   }
 

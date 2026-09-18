@@ -1,23 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { diffIsEmpty, diffWithHysteresis } from "../src/lib/diff";
-import type { ScanResult } from "../src/lib/scan-types";
+import { tlsResultsOf, type ScanResult } from "../src/lib/scan-types";
 import type { DiffInput } from "../src/lib/diff";
 
-function scan(open: number[], validTo?: string): ScanResult {
+function scan(open: number[], validTo?: string, port = 443): ScanResult {
   return {
     host: "example.com",
     addresses: ["93.184.216.34"],
     ports: { scanned: 100, open, refused: 100 - open.length, filtered: 0, durationMs: 1000 },
-    tls: { checked: true, ok: true, validTo },
+    tls: validTo ? [{ port, checked: true, ok: true, validTo }] : [],
     dns: { spf: null, dmarc: null, mx: [] },
     http: { port80Open: open.includes(80), httpsOk: false },
     banners: [],
   };
 }
 
-function input(open: number[], types: string[] = [], validTo?: string): DiffInput {
-  return { result: scan(open, validTo), findingTypes: types };
+function input(open: number[], types: string[] = [], validTo?: string, port = 443): DiffInput {
+  return { result: scan(open, validTo, port), findingTypes: types };
 }
 
 test("ports that appear or disappear between consecutive scans are raw changes", () => {
@@ -95,17 +95,20 @@ test("a certificate renewal is a change, identical certs are not", () => {
     input([443], [], "2026-09-01T00:00:00.000Z"),
     input([443], [], "2026-10-01T00:00:00.000Z"),
   );
-  assert.deepEqual(renewed.certExpiryChanged, {
-    from: "2026-09-01T00:00:00.000Z",
-    to: "2026-10-01T00:00:00.000Z",
-  });
+  assert.deepEqual(renewed.certExpiryChanged, [
+    {
+      port: 443,
+      from: "2026-09-01T00:00:00.000Z",
+      to: "2026-10-01T00:00:00.000Z",
+    },
+  ]);
 
   const same = diffWithHysteresis(
     null,
     input([443], [], "2026-10-01T00:00:00.000Z"),
     input([443], [], "2026-10-01T00:00:00.000Z"),
   );
-  assert.equal(same.certExpiryChanged, null);
+  assert.deepEqual(same.certExpiryChanged, []);
 
   // a missing cert on one side is a hole in the data, not a change
   const hole = diffWithHysteresis(
@@ -113,7 +116,43 @@ test("a certificate renewal is a change, identical certs are not", () => {
     input([22], []),
     input([443], [], "2026-10-01T00:00:00.000Z"),
   );
-  assert.equal(hole.certExpiryChanged, null);
+  assert.deepEqual(hole.certExpiryChanged, []);
+});
+
+test("mail port renewals are tracked per port", () => {
+  const renewed = diffWithHysteresis(
+    null,
+    input([465], [], "2026-09-01T00:00:00.000Z", 465),
+    input([465], [], "2026-10-01T00:00:00.000Z", 465),
+  );
+  assert.deepEqual(renewed.certExpiryChanged, [
+    {
+      port: 465,
+      from: "2026-09-01T00:00:00.000Z",
+      to: "2026-10-01T00:00:00.000Z",
+    },
+  ]);
+});
+
+test("rows stored before the per port shape still diff on 443", () => {
+  // the wire format used to store one object without a port
+  const legacy = {
+    result: {
+      ...scan([443]),
+      tls: { checked: true, ok: true, validTo: "2026-09-01T00:00:00.000Z" },
+    } as unknown as ScanResult,
+    findingTypes: [],
+  };
+  const renewed = diffWithHysteresis(
+    legacy,
+    input([443], [], "2026-10-01T00:00:00.000Z"),
+    input([443], [], "2026-11-01T00:00:00.000Z"),
+  );
+  assert.deepEqual(
+    renewed.certExpiryChanged.map((c) => c.port),
+    [443],
+  );
+  assert.equal(tlsResultsOf(legacy.result)[0].port, 443);
 });
 
 test("diffIsEmpty reports a quiet scan", () => {
