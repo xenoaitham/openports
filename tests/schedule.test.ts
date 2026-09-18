@@ -13,7 +13,7 @@ import {
 
 const NOW = 1_800_000_000_000;
 
-test("a target with no done scan is due immediately", () => {
+test("a target with no finished scan is due immediately", () => {
   assert.equal(rescanDue(null, NOW), true);
 });
 
@@ -25,6 +25,16 @@ test("a scan inside the cadence keeps the target quiet", () => {
 test("a scan older than the cadence makes the target due", () => {
   assert.equal(rescanDue(NOW - RESCAN_INTERVAL_MS, NOW), true);
   assert.equal(rescanDue(NOW - RESCAN_INTERVAL_MS - 60_000, NOW), true);
+});
+
+test("a failed attempt counts: a never succeeded target is retried at the cadence, not on every tick", () => {
+  // the old rule read "no done scan" as due, so a verified target whose
+  // scans always fail was requeued every two seconds forever. the finish
+  // time of the failed scan is what resets the wait now.
+  const recentFailure = NOW - 60_000;
+  assert.equal(rescanDue(recentFailure, NOW), false);
+  const oldFailure = NOW - RESCAN_INTERVAL_MS - 60_000;
+  assert.equal(rescanDue(oldFailure, NOW), true);
 });
 
 test("the scheduler subqueries correlate on the outer target, not on scans", () => {
