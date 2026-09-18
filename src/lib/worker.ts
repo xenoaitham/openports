@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   findings,
@@ -11,6 +11,7 @@ import { runScanChecks } from "./scanner";
 import { evaluateScanResult } from "./evaluate";
 import { diffScanOutputs, type DiffInput } from "./diff";
 import { isPreallowed } from "./host";
+import { rescanDue } from "./schedule";
 import type { ScanResult } from "./scan-types";
 
 // simple in-process worker: one queued scan at a time, oldest first.
@@ -79,6 +80,51 @@ async function previousDoneInput(
   return { result: parseResult(row), findingTypes: types.map((t) => t.type) };
 }
 
+// a scan that was running when the process died would sit in "running"
+// forever, and the scheduler would read that as work in progress and never
+// rescan the target. at boot, write down what actually happened: the scan
+// did not finish.
+export async function failInterruptedScans() {
+  await db
+    .update(scans)
+    .set({
+      status: "failed",
+      error: "scan interrupted: the server restarted before it finished",
+      finishedAt: new Date(),
+    })
+    .where(eq(scans.status, "running"));
+}
+
+// the scheduled pass over verified targets. a target is due when its newest
+// done scan is older than the cadence. a target that already has a queued or
+// running scan is skipped, so a scheduled rescan never piles up behind a
+// scan that has not run yet; once that scan lands, its finished time resets
+// the cadence and the next tick sees the target as not due.
+async function enqueueDueRescans() {
+  const rows = await db
+    .select({
+      id: targets.id,
+      active: sql<boolean>`EXISTS (
+        SELECT 1 FROM ${scans}
+        WHERE ${scans.targetId} = ${targets.id}
+          AND ${scans.status} IN ('queued', 'running')
+      )`,
+      lastDoneAt: sql<number | null>`(
+        SELECT MAX(${scans.finishedAt}) FROM ${scans}
+        WHERE ${scans.targetId} = ${targets.id}
+          AND ${scans.status} = 'done'
+      )`,
+    })
+    .from(targets)
+    .where(eq(targets.status, "verified"));
+  const now = Date.now();
+  for (const row of rows) {
+    if (row.active) continue;
+    if (!rescanDue(row.lastDoneAt ?? null, now)) continue;
+    await db.insert(scans).values({ targetId: row.id, status: "queued" });
+  }
+}
+
 async function tick() {
   if (g.__openportsBusy) return;
   g.__openportsBusy = true;
@@ -88,6 +134,10 @@ async function tick() {
       if (!next) break;
       await runOne(next.scan, next.target);
     }
+    // queue drained: offer the scheduled rescans. anything queued here is
+    // picked up by the next tick, two seconds later at the latest. the busy
+    // guard holds for the whole pass, so scanning stays one at a time.
+    await enqueueDueRescans();
   } finally {
     g.__openportsBusy = false;
   }

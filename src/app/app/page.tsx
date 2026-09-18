@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import AddTargetForm from "@/components/add-target-form";
 import { ScanStatusWord, TargetStatusWord } from "@/components/words";
 import { listTargetOverviews } from "@/lib/queries";
+import { RESCAN_INTERVAL_MS } from "@/lib/schedule";
 import { timeAgo } from "@/lib/format";
 import type { TargetOverview } from "@/lib/view-types";
 
@@ -21,7 +22,8 @@ export default async function AppPage() {
       <h1 className="text-2xl font-medium tracking-tight">Targets</h1>
       <p className="mt-1 text-sm text-muted">
         Add a domain. It gets scanned after you prove ownership with one DNS
-        record, never before.
+        record, never before. Verified targets are then rescanned every{" "}
+        {RESCAN_INTERVAL_MS / 3_600_000} hours on their own.
       </p>
 
       <AddTargetForm />
