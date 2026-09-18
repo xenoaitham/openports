@@ -79,9 +79,11 @@ export async function verifyTarget(id: number): Promise<VerifyResult> {
     await enqueueScan(id);
     return { ok: true, status: "verified" };
   }
+  // the target stays pending: not having published the record yet is the
+  // normal state, not a failure. the reason is kept for the verify panel.
   await db
     .update(targets)
-    .set({ status: "failed", failReason: result.reason ?? "verification failed" })
+    .set({ failReason: result.reason ?? "verification failed" })
     .where(eq(targets.id, id));
   return { ok: false, error: result.reason ?? "verification failed" };
 }

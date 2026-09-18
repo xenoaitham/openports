@@ -16,8 +16,7 @@ export function SeverityWord({ severity }: { severity: Severity }) {
 }
 
 export function TargetStatusWord({ status }: { status: TargetStatus }) {
-  const cls =
-    status === "failed" ? "text-high" : status === "verified" ? "" : "text-muted";
+  const cls = status === "verified" ? "" : "text-muted";
   return <span className={cls}>{status}</span>;
 }
 
