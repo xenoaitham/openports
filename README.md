@@ -10,6 +10,7 @@ Small companies should not need a security team to answer one question: what doe
 - Every open port gets one short conversation after the sweep: listen for a greeting, one http GET if the port stays quiet, certificate subject on the TLS ports. A port that says nothing is reported as "no banner".
 - Certificate checks run on 443 and the mail ports 465, 993 and 995 whenever they answer: subject, issuer, expiry. Validation stays on, so an expired, self-signed or mismatched certificate shows up as a rejected handshake and is reported as a finding from the catalog.
 - Each scan is diffed against the previous one: ports opened or closed, findings new or resolved, certificate expiry changed. A change is marked unconfirmed until the next scan sees the same thing, so a flapping port does not cry wolf.
+- The dashboard gathers the latest change from every target into one feed, newest first, with the target named on each entry, so the scheduled scans are visible without opening each target. The targets table shows when each target last changed.
 - Verified targets are rescanned on a fixed cadence, every 6 hours, with no per target config. The worker rechecks verification before every scan, scheduled or not, and a scheduled rescan never queues up behind a scan that has not run yet.
 - There is no auth yet. Anyone using your instance sees every target, so run it locally or behind something that gates access.
 - One process, one SQLite file (through Drizzle), the scan worker is an interval in that same process. No queue, no redis, no docker.
