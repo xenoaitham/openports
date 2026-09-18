@@ -4,50 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { TargetDetail } from "@/lib/view-types";
 import type { ScanDiff } from "@/lib/diff";
-import { getCatalogEntry } from "@/lib/catalog";
 import { formatDateTime, formatDuration, timeAgo } from "@/lib/format";
 import { ScanStatusWord, TargetStatusWord } from "./words";
 import FindingsList from "./findings";
 import ScanResultTable from "./scan-result-table";
 import RescanButton from "./rescan-button";
 import VerifyPanel from "./verify-panel";
+import ChangesList from "./changes";
 
 function ChangesBlock({ since, diff }: { since: string | null; diff: ScanDiff }) {
-  const lines: string[] = [];
-  for (const it of diff.portsOpened) {
-    lines.push(`port ${it.port} appeared (${it.confirmed ? "confirmed" : "unconfirmed"})`);
-  }
-  for (const it of diff.portsClosed) {
-    lines.push(`port ${it.port} closed (${it.confirmed ? "confirmed" : "unconfirmed"})`);
-  }
-  for (const it of diff.findingsNew) {
-    lines.push(`new finding: ${getCatalogEntry(it.type)?.title ?? it.type}`);
-  }
-  for (const it of diff.findingsResolved) {
-    lines.push(`finding resolved: ${getCatalogEntry(it.type)?.title ?? it.type}`);
-  }
-  for (const it of diff.certExpiryChanged) {
-    lines.push(
-      `certificate expiry changed on port ${it.port}: ${it.from.slice(0, 10)} to ${it.to.slice(0, 10)}`,
-    );
-  }
-
   return (
     <div>
       <p className="mt-2 text-xs text-muted">
         against the scan started {formatDateTime(since)}
       </p>
-      {lines.length === 0 ? (
-        <p className="mt-2 text-sm text-muted">
-          No changes. Same ports, same findings, same certificate.
-        </p>
-      ) : (
-        <ul className="mt-2 space-y-1 text-sm">
-          {lines.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      )}
+      <ChangesList diff={diff} />
       <p className="mt-2 text-xs text-muted">
         A change is unconfirmed until the next scan sees the same thing.
       </p>

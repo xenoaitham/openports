@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { diffIsEmpty, diffWithHysteresis } from "../src/lib/diff";
+import {
+  changesForScans,
+  diffIsEmpty,
+  diffScanOutputs,
+  diffWithHysteresis,
+  storedDiffHasChanges,
+} from "../src/lib/diff";
 import { tlsResultsOf, type ScanResult } from "../src/lib/scan-types";
 import type { DiffInput } from "../src/lib/diff";
 
@@ -164,4 +170,80 @@ test("diffIsEmpty reports a quiet scan", () => {
     diffIsEmpty(diffWithHysteresis(null, input([22]), input([22, 80]))),
     false,
   );
+});
+
+test("changesForScans is the one recompute both feeds share", () => {
+  // scan rows, newest first: the port 80 reopen at scan 3 is the scanme
+  // flap reverting, so it reads confirmed. the finding set is unchanged.
+  const rows = [
+    { id: 3, result: JSON.stringify(scan([22, 80])), startedAt: new Date("2026-09-18T03:00:00Z") },
+    { id: 2, result: JSON.stringify(scan([22])), startedAt: new Date("2026-09-18T02:00:00Z") },
+    { id: 1, result: JSON.stringify(scan([22, 80])), startedAt: new Date("2026-09-18T01:00:00Z") },
+  ];
+  const types = new Map([
+    [1, ["spf_missing"]],
+    [2, ["spf_missing"]],
+    [3, ["spf_missing"]],
+  ]);
+  const changes = changesForScans(rows, types);
+  assert.equal(changes?.since, "2026-09-18T02:00:00.000Z");
+  assert.deepEqual(changes?.diff.portsOpened.map((p) => p.port), [80]);
+  assert.equal(changes?.diff.portsOpened[0].confirmed, true);
+
+  // identical inputs through the direct path must produce the identical
+  // diff, or the target page and the dashboard feed could disagree
+  const direct = diffWithHysteresis(
+    input([22, 80], ["spf_missing"]),
+    input([22], ["spf_missing"]),
+    input([22, 80], ["spf_missing"]),
+  );
+  assert.deepEqual(changes?.diff, direct);
+});
+
+test("changesForScans needs two done scans and labels without a baseline", () => {
+  const types = new Map<number, string[]>();
+  assert.equal(changesForScans([], types), null);
+  const only = [{ id: 7, result: JSON.stringify(scan([22])), startedAt: null }];
+  assert.equal(changesForScans(only, types), null);
+
+  // two scans, no older baseline: every change stays unconfirmed
+  const two = [
+    { id: 9, result: JSON.stringify(scan([22])), startedAt: new Date("2026-09-18T02:00:00Z") },
+    { id: 8, result: JSON.stringify(scan([22, 80])), startedAt: new Date("2026-09-18T01:00:00Z") },
+  ];
+  const changes = changesForScans(two, types);
+  assert.equal(changes?.since, "2026-09-18T01:00:00.000Z");
+  assert.deepEqual(changes?.diff.portsClosed.map((p) => p.port), [80]);
+  assert.equal(changes?.diff.portsClosed[0].confirmed, false);
+});
+
+test("storedDiffHasChanges reads the audit trail without trusting its shape", () => {
+  // a current era diff with a real change
+  const raw = JSON.stringify(diffScanOutputs(input([22]), input([22, 80])));
+  assert.equal(storedDiffHasChanges(raw), true);
+  // a quiet scan stores the all empty shape
+  const quiet = JSON.stringify(diffScanOutputs(input([22]), input([22])));
+  assert.equal(storedDiffHasChanges(quiet), false);
+  // rows from the era that stored one certificate object instead of an array
+  assert.equal(
+    storedDiffHasChanges(
+      JSON.stringify({
+        portsOpened: [],
+        portsClosed: [],
+        findingsNew: [],
+        findingsResolved: [],
+        certExpiryChanged: { port: 443, from: "a", to: "b" },
+      }),
+    ),
+    true,
+  );
+  assert.equal(
+    storedDiffHasChanges(
+      JSON.stringify({ portsOpened: [], certExpiryChanged: {} }),
+    ),
+    false,
+  );
+  // no diff at all, or a broken one, is no change
+  assert.equal(storedDiffHasChanges(null), false);
+  assert.equal(storedDiffHasChanges("not json"), false);
 });

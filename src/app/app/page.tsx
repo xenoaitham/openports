@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import AddTargetForm from "@/components/add-target-form";
 import { ScanStatusWord, TargetStatusWord } from "@/components/words";
-import { listTargetOverviews } from "@/lib/queries";
+import { changeLines } from "@/components/changes";
+import { listRecentChanges, listTargetOverviews } from "@/lib/queries";
 import { RESCAN_INTERVAL_MS } from "@/lib/schedule";
 import { timeAgo } from "@/lib/format";
 import type { TargetOverview } from "@/lib/view-types";
@@ -15,7 +16,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AppPage() {
-  const targets = await listTargetOverviews();
+  const [targets, feed] = await Promise.all([
+    listTargetOverviews(),
+    listRecentChanges(),
+  ]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -94,6 +98,48 @@ export default async function AppPage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {targets.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-base font-medium">Recent changes</h2>
+          {feed.entries.length === 0 ? (
+            <p className="mt-2 max-w-2xl text-sm text-muted">
+              {feed.comparedTargets === 0
+                ? "No target has two finished scans yet, so there is nothing to compare."
+                : "Nothing has changed on any target between its last two scans."}
+            </p>
+          ) : (
+            <ul className="mt-2">
+              {feed.entries.map((entry) => (
+                <li key={entry.targetId} className="border-b border-line py-2.5">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <a
+                      href={`/targets/${entry.targetId}`}
+                      className="font-mono text-sm text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
+                    >
+                      {entry.domain}
+                    </a>
+                    <span
+                      className="font-mono text-xs text-muted"
+                      suppressHydrationWarning
+                    >
+                      {timeAgo(entry.finishedAt)}
+                    </span>
+                  </div>
+                  <ul className="mt-1 space-y-0.5 text-sm">
+                    {changeLines(entry.changes.diff).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-xs text-muted">
+            A change is unconfirmed until the next scan sees the same thing.
+          </p>
+        </section>
       )}
     </main>
   );

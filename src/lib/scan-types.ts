@@ -22,6 +22,19 @@ export interface TlsResult {
   error?: string;
 }
 
+// scan rows keep the result as json text. a broken or half written row reads
+// as null instead of taking a page down.
+export function parseScanResult(
+  raw: string | null | undefined,
+): ScanResult | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ScanResult;
+  } catch {
+    return null;
+  }
+}
+
 // scans stored before the per port shape kept a single object without the
 // port; those were all the 443 check. new rows always carry an array.
 export function tlsResultsOf(result: ScanResult | null | undefined): TlsResult[] {

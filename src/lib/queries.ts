@@ -1,8 +1,11 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { findings, scans, targets } from "@/db/schema";
 import { severityRank } from "./catalog";
-import { diffWithHysteresis, type DiffInput } from "./diff";
+import {
+  changesForScans,
+  diffIsEmpty,
+} from "./diff";
 import { isPreallowed, normalizeDomain, resolvePublicHost } from "./host";
 import { generateToken, checkTxtRecord } from "./verify";
 import { enqueueScan } from "./worker";
@@ -13,7 +16,7 @@ import type {
   TargetOverview,
   TargetView,
 } from "./view-types";
-import type { ScanResult } from "./scan-types";
+import { parseScanResult, type ScanResult } from "./scan-types";
 
 export type CreateResult =
   | { ok: true; id: number }
@@ -122,22 +125,7 @@ function serializeTarget(t: typeof targets.$inferSelect): TargetView {
 }
 
 function parsePorts(result: string | null): number[] {
-  if (!result) return [];
-  try {
-    const parsed = JSON.parse(result) as ScanResult;
-    return parsed.ports?.open ?? [];
-  } catch {
-    return [];
-  }
-}
-
-function parseResult(result: string | null): ScanResult | null {
-  if (!result) return null;
-  try {
-    return JSON.parse(result) as ScanResult;
-  } catch {
-    return null;
-  }
+  return parseScanResult(result)?.ports?.open ?? [];
 }
 
 export async function getTargetDetail(id: number): Promise<TargetDetail | null> {
@@ -207,33 +195,13 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
     findingViews.sort(
       (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
     );
-    if (latestDone.result) {
-      try {
-        rawResult = JSON.parse(latestDone.result) as ScanResult;
-      } catch {
-        rawResult = null;
-      }
-    }
+    rawResult = parseScanResult(latestDone.result);
   }
 
   // changes feed: latest done scan vs the one before, labeled with
-  // hysteresis from the scan before that
-  let changes: TargetDetail["changes"] = null;
-  const [prevDone, prevPrevDone] = [doneScans[1] ?? null, doneScans[2] ?? null];
-  if (latestDone && prevDone) {
-    const input = (row: typeof scans.$inferSelect): DiffInput => ({
-      result: parseResult(row.result),
-      findingTypes: typesByScan.get(row.id) ?? [],
-    });
-    changes = {
-      since: prevDone.startedAt ? prevDone.startedAt.toISOString() : null,
-      diff: diffWithHysteresis(
-        prevPrevDone ? input(prevPrevDone) : null,
-        input(prevDone),
-        input(latestDone),
-      ),
-    };
-  }
+  // hysteresis from the scan before that. same recompute as the cross
+  // target feed on the dashboard.
+  const changes = changesForScans(doneScans.slice(0, 3), typesByScan);
 
   return {
     target: serializeTarget(target),
@@ -293,6 +261,78 @@ export async function listTargetOverviews(): Promise<TargetOverview[]> {
     });
   }
   return out;
+}
+
+export interface ChangeEntry {
+  targetId: number;
+  domain: string;
+  // when the scan that recorded the change finished
+  finishedAt: string | null;
+  changes: NonNullable<TargetDetail["changes"]>;
+}
+
+export interface RecentChanges {
+  entries: ChangeEntry[];
+  // targets that actually have two done scans to compare
+  comparedTargets: number;
+}
+
+// the cross target changes feed: every target contributes the diff of its
+// newest done scan, recomputed exactly like the target page recomputes it,
+// so the two feeds cannot disagree. a target whose latest scan changed
+// nothing contributes nothing; older changes stay on the scan rows as the
+// audit trail.
+export async function listRecentChanges(): Promise<RecentChanges> {
+  const targetRows = await db
+    .select({ id: targets.id, domain: targets.domain })
+    .from(targets)
+    .orderBy(desc(targets.id));
+
+  const perTarget = new Map<number, (typeof scans.$inferSelect)[]>();
+  const scanIds: number[] = [];
+  let comparedTargets = 0;
+  for (const t of targetRows) {
+    const doneRows = await db
+      .select()
+      .from(scans)
+      .where(and(eq(scans.targetId, t.id), eq(scans.status, "done")))
+      .orderBy(desc(scans.id))
+      .limit(3);
+    if (doneRows.length >= 2) comparedTargets += 1;
+    perTarget.set(t.id, doneRows);
+    scanIds.push(...doneRows.map((r) => r.id));
+  }
+
+  const typeRows = scanIds.length
+    ? await db
+        .select({ scanId: findings.scanId, type: findings.type })
+        .from(findings)
+        .where(inArray(findings.scanId, scanIds))
+    : [];
+  const typesByScan = new Map<number, string[]>();
+  for (const row of typeRows) {
+    typesByScan.set(row.scanId, [...(typesByScan.get(row.scanId) ?? []), row.type]);
+  }
+
+  const entries: ChangeEntry[] = [];
+  for (const t of targetRows) {
+    const doneRows = perTarget.get(t.id) ?? [];
+    const changes = changesForScans(doneRows, typesByScan);
+    if (!changes || diffIsEmpty(changes.diff)) continue;
+    const finished = doneRows[0].finishedAt;
+    entries.push({
+      targetId: t.id,
+      domain: t.domain,
+      finishedAt: finished ? finished.toISOString() : null,
+      changes,
+    });
+  }
+  entries.sort((a, b) => {
+    const ta = a.finishedAt ? Date.parse(a.finishedAt) : 0;
+    const tb = b.finishedAt ? Date.parse(b.finishedAt) : 0;
+    return tb - ta;
+  });
+  return { entries, comparedTargets };
 }
 
 export async function getTargetDetailJson(id: number): Promise<TargetDetail | null> {

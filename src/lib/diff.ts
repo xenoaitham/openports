@@ -1,4 +1,4 @@
-import { tlsResultsOf, type ScanResult } from "./scan-types";
+import { tlsResultsOf, parseScanResult, type ScanResult } from "./scan-types";
 
 // scan diff: what changed between the previous done scan and this one.
 // pure functions, same input, same output, no database, no network.
@@ -119,4 +119,61 @@ export function diffIsEmpty(diff: ScanDiff): boolean {
     diff.findingsResolved.length === 0 &&
     diff.certExpiryChanged.length === 0
   );
+}
+
+// the changes view for one target: the newest done scan against the one
+// before it, labeled with hysteresis from the scan before that. the target
+// page and the cross target feed on the dashboard both call this with the
+// same three scans, so the two feeds cannot disagree.
+export function changesForScans(
+  // newest first, at most the last three done scans of one target
+  doneScans: { id: number; result: string | null; startedAt: Date | null }[],
+  findingTypesByScan: Map<number, string[]>,
+): { since: string | null; diff: ScanDiff } | null {
+  const [latest, prev, prevPrev] = doneScans;
+  if (!latest || !prev) return null;
+  const input = (row: { id: number; result: string | null }): DiffInput => ({
+    result: parseScanResult(row.result),
+    findingTypes: findingTypesByScan.get(row.id) ?? [],
+  });
+  return {
+    since: prev.startedAt ? prev.startedAt.toISOString() : null,
+    diff: diffWithHysteresis(
+      prevPrev ? input(prevPrev) : null,
+      input(prev),
+      input(latest),
+    ),
+  };
+}
+
+// the stored diff is the audit trail and its shape varies between eras, so
+// nothing display facing reads it as data. the one question it can still
+// answer without a recompute is whether that scan recorded any change at
+// all, which is what the targets table needs for its last change column.
+export function storedDiffHasChanges(raw: string | null): boolean {
+  if (!raw) return false;
+  try {
+    const diff = JSON.parse(raw) as Partial<ScanDiff>;
+    const counts = (v: unknown) => Array.isArray(v) && v.length > 0;
+    if (
+      counts(diff.portsOpened) ||
+      counts(diff.portsClosed) ||
+      counts(diff.findingsNew) ||
+      counts(diff.findingsResolved)
+    ) {
+      return true;
+    }
+    // rows from the era that stored one certificate object instead of a
+    // per port array
+    const cert = diff.certExpiryChanged;
+    if (Array.isArray(cert)) return cert.length > 0;
+    return (
+      cert !== null &&
+      cert !== undefined &&
+      typeof cert === "object" &&
+      Object.keys(cert).length > 0
+    );
+  } catch {
+    return false;
+  }
 }
