@@ -12,6 +12,7 @@ Small companies should not need a security team to answer one question: what doe
 - Each scan is diffed against the previous one: ports opened or closed, findings new or resolved, certificate expiry changed. A change is marked unconfirmed until the next scan sees the same thing, so a flapping port does not cry wolf.
 - The dashboard gathers the latest change from every target into one feed, newest first, with the target named on each entry, so the scheduled scans are visible without opening each target. The targets table shows when each target last changed.
 - Verified targets are rescanned on a fixed cadence, every 6 hours, with no per target config. The worker rechecks verification before every scan, scheduled or not, and a scheduled rescan never queues up behind a scan that has not run yet.
+- The scan history is bounded: the last 100 done scans are kept per target and older ones are deleted, with their findings and stored diffs going with them through the cascade. Failed scans are not counted.
 - There is no auth yet. Anyone using your instance sees every target, so run it locally or behind something that gates access.
 - One process, one SQLite file (through Drizzle), the scan worker is an interval in that same process. No queue, no redis, no docker.
 - Active scanning, the TCP port sweep, runs only against targets that passed the TXT check. The single exception is scanme.nmap.org, which the Nmap project runs for scanner testing. Passive DNS checks are safe and run before that.

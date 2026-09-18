@@ -11,6 +11,7 @@ import { runScanChecks } from "./scanner";
 import { evaluateScanResult } from "./evaluate";
 import { diffScanOutputs, type DiffInput } from "./diff";
 import { isPreallowed } from "./host";
+import { pruneDoneScans } from "./retention";
 import { rescanDue, schedulerFields } from "./schedule";
 import type { ScanResult } from "./scan-types";
 
@@ -178,6 +179,16 @@ async function runOne(scan: ScanRow, target: TargetRow) {
         .update(scans)
         .set({ diff: JSON.stringify(diff) })
         .where(eq(scans.id, scan.id));
+    }
+
+    // the scan that just finished is the only moment the table can cross the
+    // retention bound, so this is where the prune runs. best effort and
+    // wrapped on purpose: the scan is already recorded as done, a failed
+    // prune must not rewrite it as failed.
+    try {
+      await pruneDoneScans(target.id);
+    } catch {
+      // retention retries on the next completed scan
     }
   } catch (err) {
     await db
