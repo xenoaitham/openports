@@ -15,6 +15,13 @@
       "when": 1789686441135,
       "tag": "0001_scan_diff",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789770777421,
+      "tag": "0002_store_the_resolved_address_on_the_target",
+      "breakpoints": true
     }
   ]
 }

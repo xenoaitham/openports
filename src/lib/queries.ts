@@ -36,10 +36,13 @@ export async function createTarget(input: string): Promise<CreateResult> {
   if (existing[0]) {
     return { ok: false, error: `${domain} is already on the list` };
   }
+  let addresses: string[] = [];
   try {
     // resolve before anything is stored: dead domains and internal addresses
-    // fail here, loudly, instead of in a scan later
-    await resolvePublicHost(domain);
+    // fail here, loudly, instead of in a scan later. the address is stored
+    // so the worker's claim can keep two names on one host from being swept
+    // at the same time.
+    addresses = await resolvePublicHost(domain);
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
@@ -52,6 +55,7 @@ export async function createTarget(input: string): Promise<CreateResult> {
       verifyToken: generateToken(),
       status: preallowed ? "verified" : "pending",
       verifiedAt: preallowed ? new Date() : null,
+      ip: addresses[0],
     })
     .returning({ id: targets.id });
 

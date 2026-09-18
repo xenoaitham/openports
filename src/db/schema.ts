@@ -7,6 +7,11 @@ export const targets = sqliteTable("targets", {
   status: text("status").$type<TargetStatus>().notNull().default("pending"),
   verifyToken: text("verify_token").notNull(),
   failReason: text("fail_reason"),
+  // the public address this target resolved to, set when the target is
+  // added and refreshed by every finished scan. the worker's claim matches
+  // on it so two names pointing at one host are never swept at the same
+  // time. nullable for rows added before the column existed.
+  ip: text("ip"),
   verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
