@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
 import {
   findings,
@@ -11,7 +11,7 @@ import { runScanChecks } from "./scanner";
 import { evaluateScanResult } from "./evaluate";
 import { diffScanOutputs, type DiffInput } from "./diff";
 import { isPreallowed } from "./host";
-import { rescanDue } from "./schedule";
+import { rescanDue, schedulerFields } from "./schedule";
 import type { ScanResult } from "./scan-types";
 
 // simple in-process worker: one queued scan at a time, oldest first.
@@ -102,19 +102,7 @@ export async function failInterruptedScans() {
 // the cadence and the next tick sees the target as not due.
 async function enqueueDueRescans() {
   const rows = await db
-    .select({
-      id: targets.id,
-      active: sql<boolean>`EXISTS (
-        SELECT 1 FROM ${scans}
-        WHERE ${scans.targetId} = ${targets.id}
-          AND ${scans.status} IN ('queued', 'running')
-      )`,
-      lastDoneAt: sql<number | null>`(
-        SELECT MAX(${scans.finishedAt}) FROM ${scans}
-        WHERE ${scans.targetId} = ${targets.id}
-          AND ${scans.status} = 'done'
-      )`,
-    })
+    .select(schedulerFields)
     .from(targets)
     .where(eq(targets.status, "verified"));
   const now = Date.now();
