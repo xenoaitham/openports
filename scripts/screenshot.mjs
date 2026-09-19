@@ -11,7 +11,7 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:4310";
-const OUT = process.env.OUT ?? "notes/img/002";
+const OUT = process.env.OUT ?? "shots";
 fs.mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();

@@ -55,3 +55,6 @@ next-env.d.ts
 
 # local build notes and screenshots, keep out of the repo
 /notes/
+
+# local screenshot output
+/shots/
