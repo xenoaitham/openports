@@ -25,6 +25,14 @@ type Db = BetterSQLite3Database<typeof schema>;
 // finished, so a burst on one host stays strictly serial, oldest first.
 // across targets the claim still takes the oldest row it may take; the
 // queue is oldest first, skipping only rows the politeness rule holds.
+// the match on one stored address is a decision, not an oversight. a scan
+// result may report several addresses, but a result is written at
+// completion, so a running scan has nothing to match on yet; matching every
+// reported address would need an address history table and a join in the
+// predicate, real machinery for a host behind round robin dns, which a
+// small company's two names rarely are. a miss costs at most two sweeps of
+// one physical host, the same traffic two genuinely different hosts get.
+// when in doubt, do less.
 //
 // every table name in the raw fragment is spelled out by hand. drizzle
 // renders an interpolated column object unqualified, and inside a subquery
