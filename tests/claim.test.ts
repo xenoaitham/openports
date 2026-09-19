@@ -252,20 +252,33 @@ test("two processes racing over one file database never claim the same row", asy
 
 test("boot recovery fails every running row and touches nothing else", async () => {
   const db = makeDb();
+  // several running rows at once is the pool shape: one per target the pool
+  // had in flight when the process died
   const a = await addTarget(db, "10.0.0.1");
-  const running = (await addQueued(db, a))[0].id;
+  const b = await addTarget(db, "10.0.0.2");
+  const c = await addTarget(db, "10.0.0.3");
+  const runningIds = [
+    (await addQueued(db, a))[0].id,
+    (await addQueued(db, b))[0].id,
+    (await addQueued(db, c))[0].id,
+  ];
+  for (const id of runningIds) await setStatus(db, id, "running");
   const queued = (await addQueued(db, a))[0].id;
-  await setStatus(db, running, "running");
 
   await failInterruptedScans(db);
 
-  const rows = await db.select().from(scans).where(inArray(scans.id, [running, queued]));
+  const rows = await db
+    .select()
+    .from(scans)
+    .where(inArray(scans.id, [...runningIds, queued]));
   const byId = new Map(rows.map((r) => [r.id, r]));
-  assert.equal(byId.get(running)?.status, "failed");
-  assert.equal(
-    byId.get(running)?.error,
-    "scan interrupted: the server restarted before it finished",
-  );
-  assert.ok(byId.get(running)?.finishedAt, "the boot stamps the finish");
+  for (const id of runningIds) {
+    assert.equal(byId.get(id)?.status, "failed");
+    assert.equal(
+      byId.get(id)?.error,
+      "scan interrupted: the server restarted before it finished",
+    );
+    assert.ok(byId.get(id)?.finishedAt, "the boot stamps the finish");
+  }
   assert.equal(byId.get(queued)?.status, "queued");
 });
