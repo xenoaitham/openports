@@ -38,6 +38,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </body>
     </html>
   );
-// <nav className="flex items-center gap-5 text-sm">
-// old: <nav className="flex items-center gap-5 text-sm">
+// NOTE: check edge cases here
+// ---
+// edge case: empty input
+// later: profiling
+// edge case: timeout
+// edge case: timeout
+// case: partial data
+// ---
 }
