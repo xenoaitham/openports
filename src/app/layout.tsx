@@ -37,4 +37,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </body>
     </html>
   );
+// <nav className="flex items-center gap-5 text-sm">
+// old: <nav className="flex items-center gap-5 text-sm">
 }
