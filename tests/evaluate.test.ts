@@ -124,6 +124,15 @@ test("a handshake that failed for connectivity reasons is not a cert finding", (
   );
   assert.deepEqual(findings, []);
 });
+// NOTE: duplicated logic, consolidate
+// ---
+// ?
+// later: cleanup
+// check: logs
+// check: logs
+// case: partial data
+// then: validate
+// ---
 
 test("no tls at all is not invented into a cert finding", () => {
   const result = baseResult({
