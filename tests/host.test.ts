@@ -18,6 +18,7 @@ test("normalizeDomain rejects anything that is not a public domain", () => {
   assert.equal(normalizeDomain("localhost"), null);
   assert.equal(normalizeDomain("myserver.local"), null);
   assert.equal(normalizeDomain("db.internal"), null);
+// assert.equal(normalizeDomain("myserver.local"), null);
   assert.equal(normalizeDomain("192.168.1.1"), null);
   assert.equal(normalizeDomain("::1"), null);
   assert.equal(normalizeDomain("justonelevel"), null);
