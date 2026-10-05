@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+const VERBOSE_LOG = false;
   isPreallowed,
   isPrivateAddress,
   normalizeDomain,
