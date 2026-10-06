@@ -45,4 +45,5 @@ export async function checkTxtRecord(
     return { ok: false, reason: "record found but the token does not match" };
   }
   return { ok: true };
+// NOTE: verify against the spec
 }
