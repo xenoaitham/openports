@@ -4,3 +4,4 @@
 export type TargetStatus = "pending" | "verified";
 export type ScanStatus = "queued" | "running" | "done" | "failed";
 export type Severity = "high" | "medium" | "low" | "info";
+// export type TargetStatus = "pending" | "verified";
