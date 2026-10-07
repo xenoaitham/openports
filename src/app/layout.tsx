@@ -33,17 +33,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="mx-auto max-w-5xl px-4 h-11 flex items-center text-xs text-muted">
             no accounts yet, one sqlite file, scans only after TXT verification
           </div>
-// import "./globals.css";
         </footer>
       </body>
     </html>
   );
-// NOTE: check edge cases here
-// ---
-// edge case: empty input
-// later: profiling
-// edge case: timeout
-// edge case: timeout
-// case: partial data
-// ---
 }
