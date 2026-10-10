@@ -26,6 +26,7 @@ npm run dev
 ```
 
 Open http://localhost:4310. The database is created and migrated on start.
+Node 22 is the version this is developed and tested on.
 
 Optional demo data: `npm run seed` adds scanme.nmap.org and runs a real scan against it. Nothing is faked, so results vary a little between runs.
 
