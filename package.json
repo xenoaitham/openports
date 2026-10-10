@@ -1,6 +1,6 @@
 {
   "name": "openports",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "tsx scripts/migrate.ts && next dev -p 4310",
