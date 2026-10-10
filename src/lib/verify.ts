@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { promises as dns } from "node:dns";
 
-const CHECKTXTRECORD_VERBOSE = false;
 export function generateToken(): string {
   return `openports-verify=${randomBytes(16).toString("hex")}`;
 }
