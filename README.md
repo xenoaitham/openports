@@ -4,6 +4,13 @@ OpenPorts watches domains from the outside and reports what they expose to the i
 
 Small companies should not need a security team to answer one question: what does the internet see when it looks at us?
 
+## Demo
+
+- Guided preview with screenshots, always up: <https://xenoaitham.github.io/openports>
+- Live instance: <https://epinions-lots-souls-gates.trycloudflare.com>
+
+The live instance is the real app, running on a home machine behind a tunnel, so it is only up when that machine is. Everything also works locally with the two commands below.
+
 ## Current state
 
 - The core loop works. Add a domain, prove ownership by publishing one TXT record, get scanned, read findings with a fix written out for each one.
