@@ -1,13 +1,13 @@
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return "never";
-  const diff = Date.now() - new Date(iso).getTime();
-  const s = Math.max(1, Math.floor(diff / 1000));
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  const elapsed = Date.now() - new Date(iso).getTime();
+  const seconds = Math.max(1, Math.floor(elapsed / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export function formatDuration(ms: number | null): string {
@@ -16,19 +16,18 @@ export function formatDuration(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-// timestamps are data: compact, sortable, zero ambiguity
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "-";
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(
-    d.getHours(),
-  )}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-function formatValue(key: string, value: unknown): string {
+function formatValue(value: unknown): string {
   if (Array.isArray(value)) {
-    return value.map((v) => formatValue(key, v)).join(", ");
+    return value.map(formatValue).join(", ");
   }
   if (
     typeof value === "string" &&
@@ -43,10 +42,10 @@ function formatValue(key: string, value: unknown): string {
 export function evidencePairs(
   evidence: Record<string, unknown>,
 ): [string, string][] {
-  const out: [string, string][] = [];
+  const pairs: [string, string][] = [];
   for (const [key, value] of Object.entries(evidence)) {
     if (value === undefined || value === null || value === "") continue;
-    out.push([key, formatValue(key, value)]);
+    pairs.push([key, formatValue(value)]);
   }
-  return out;
+  return pairs;
 }

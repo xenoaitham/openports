@@ -46,13 +46,6 @@ next-env.d.ts
 *.db-wal
 *.db-shm
 
-# local files next dev regenerates, keep out of the repo
-/AGENTS.md
-/CLAUDE.md
-
-# local hook state
-/.mimosa/
-
 # local build notes and screenshots, keep out of the repo
 /notes/
 

@@ -74,14 +74,8 @@ async function sweepPorts(host: string): Promise<{
   };
 }
 
-// certificate validation stays on, everywhere. this is a certificate
-// auditor: a self-signed, expired or mismatched certificate is exactly the
-// thing to report, so a rejected handshake is the finding, not a problem to
-// route around (the recorded decision on reading untrusted certs). the
-// connection goes to the resolved address but the server name is the
-// domain, the same thing a browser does, or every name check would fail
-// for the wrong reason. no credentials or user data cross this connection,
-// and the socket closes right after the handshake.
+// Keep certificate validation enabled so rejected handshakes become findings.
+// Connect to the resolved IP, using the domain for SNI and hostname validation.
 function checkTls(
   host: string,
   port: number,

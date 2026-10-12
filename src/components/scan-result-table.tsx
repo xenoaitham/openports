@@ -6,10 +6,10 @@ import type {
 import { tlsResultsOf } from "@/lib/scan-types";
 import { formatDuration } from "@/lib/format";
 
-// the full scan result as one table. this is the interface, not a summary
-// of it: everything the scanner learned, in the order it learned it.
 export default function ScanResultTable({ result }: { result: ScanResult }) {
-  const bannerLines = (result.banners ?? []).map((b) => `${b.port}: ${b.line}`);
+  const bannerLines = (result.banners ?? []).map(
+    (banner) => `${banner.port}: ${banner.line}`,
+  );
   const tlsChecks = tlsResultsOf(result);
   const rows: [string, string][] = [
     ["resolved", result.addresses.join(", ")],
@@ -20,15 +20,23 @@ export default function ScanResultTable({ result }: { result: ScanResult }) {
         `${result.ports.filtered} filtered`,
     ],
     ["ports open", result.ports.open.join(", ") || "none"],
-    ...(bannerLines.length > 0 ? [["services", bannerLines.join("\n")] as [string, string]] : []),
-    ...(tlsChecks.length > 0
-      ? tlsChecks.map((t): [string, string] => [`tls ${t.port}`, tlsRow(t)])
-      : [["tls", "no tls port open (443, 465, 993, 995)"] as [string, string]]),
+  ];
+  if (bannerLines.length > 0) {
+    rows.push(["services", bannerLines.join("\n")]);
+  }
+  if (tlsChecks.length > 0) {
+    for (const tls of tlsChecks) {
+      rows.push([`tls ${tls.port}`, tlsRow(tls)]);
+    }
+  } else {
+    rows.push(["tls", "no tls port open (443, 465, 993, 995)"]);
+  }
+  rows.push(
     ["spf", result.dns.spf ?? "absent"],
     ["dmarc", result.dns.dmarc ?? "absent"],
     ["mx", mxRow(result.dns.mx, result.dns.mxError)],
     ["http", httpRow(result.http)],
-  ];
+  );
 
   return (
     <table className="mt-3 w-full max-w-3xl border-collapse">
@@ -68,7 +76,7 @@ function mxRow(
   mxError?: string,
 ): string {
   if (mx.length > 0) {
-    return mx.map((m) => `${m.priority} ${m.exchange}`).join(", ");
+    return mx.map((record) => `${record.priority} ${record.exchange}`).join(", ");
   }
   return mxError ? `none (${mxError})` : "none";
 }

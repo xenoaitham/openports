@@ -1,40 +1,71 @@
 # OpenPorts
 
-OpenPorts watches domains from the outside and reports what they expose to the internet: open ports, TLS certificates that are expired or about to be, mail records that allow spoofing, headers that leak the stack.
+OpenPorts checks what a domain exposes to the internet and keeps a history of changes. It reports open ports, certificate problems, missing mail records, and HTTP configuration issues, with evidence and a suggested fix for each finding.
 
-Small companies should not need a security team to answer one question: what does the internet see when it looks at us?
+The app runs as one Next.js process with a SQLite database. There is no separate queue service.
 
-## Demo
+## Run locally
 
-- Guided preview with screenshots, always up: <https://xenoaitham.github.io/openports>
-- Live instance: <https://epinions-lots-souls-gates.trycloudflare.com>
+Use Node.js 22.
 
-The live instance is the real app, running on a home machine behind a tunnel, so it is only up when that machine is. Everything also works locally with the two commands below.
-
-## Current state
-
-- The core loop works. Add a domain, prove ownership by publishing one TXT record, get scanned, read findings with a fix written out for each one.
-- Every open port gets one short conversation after the sweep: listen for a greeting, one http GET if the port stays quiet, certificate subject on the TLS ports. A port that says nothing is reported as "no banner".
-- Certificate checks run on 443 and the mail ports 465, 993 and 995 whenever they answer: subject, issuer, expiry. Validation stays on, so an expired, self-signed or mismatched certificate shows up as a rejected handshake and is reported as a finding from the catalog.
-- Each scan is diffed against the previous one: ports opened or closed, findings new or resolved, certificate expiry changed. A change is marked unconfirmed until the next scan sees the same thing, so a flapping port does not cry wolf.
-- The dashboard gathers the latest change from every target into one feed, newest first, with the target named on each entry, so the scheduled scans are visible without opening each target. The targets table shows when each target last changed.
-- Verified targets are rescanned on a fixed cadence, every 6 hours, with no per target config. The worker rechecks verification before every scan, scheduled or not, and a scheduled rescan never queues up behind a scan that has not run yet. A failed scan counts as an attempt: a target whose scans never succeed is retried at the cadence, once per six hours, not on every two second tick.
-- The scan history is bounded: the last 100 done scans are kept per target and older ones are deleted, with their findings and stored diffs going with them through the cascade. Failed scans are not counted.
-- There is no auth yet. Anyone using your instance sees every target, so run it locally or behind something that gates access.
-- One process, one SQLite file (through Drizzle). The scan worker is a small pool in that same process, up to three scans at once, oldest queue row first. The claim is one atomic update: a row goes to exactly one worker, and a host is never swept from two workers at the same time, even when two target names resolve to the same address. No queue, no redis, no docker.
-- Active scanning, the TCP port sweep, runs only against targets that passed the TXT check. The single exception is scanme.nmap.org, which the Nmap project runs for scanner testing. Passive DNS checks are safe and run before that.
-- The finding catalog and the code that derives findings from scan output live in plain modules with no UI imports, so the future public report page can reuse them without a refactor.
-
-## Run it
-
-```
-npm install
+```sh
+npm ci
 npm run dev
 ```
 
-Open http://localhost:4310. The database is created and migrated on start.
-Node 22 is the version this is developed and tested on.
+Open <http://localhost:4310>. The development command creates the database and applies migrations before starting the server.
 
-Optional demo data: `npm run seed` adds scanme.nmap.org and runs a real scan against it. Nothing is faked, so results vary a little between runs.
+Add a domain, publish the TXT record shown on its page, and check ownership. Scanning starts after verification. `scanme.nmap.org` is the built-in exception for testing.
 
-Tests: `npm test`.
+For a real demo scan:
+
+```sh
+npm run seed
+```
+
+Results depend on what the target returns. A [screenshot preview](https://xenoaitham.github.io/openports) is also available.
+
+## Checks
+
+- A TCP sweep of 100 common ports, followed by short service-banner checks.
+- TLS certificate checks on open ports 443, 465, 993, and 995. Certificate validation stays enabled.
+- SPF, DMARC, and MX records.
+- HTTP redirects, HSTS, and server headers.
+- Changes to open ports, findings, and certificate expiry dates. Port and finding changes use the last three completed scans to distinguish confirmed changes from one-off results.
+
+Verified targets are scanned every six hours. Failed attempts also reset that interval. Up to three scans run at once; targets sharing the same stored IP address are scanned one at a time.
+
+Each target keeps its latest 100 completed scans. Removing older scans also removes their findings and stored diffs. Failed scans are kept separately.
+
+## Commands
+
+```sh
+npm test          # Run regression tests
+npm run db:migrate
+npm run build
+npm start         # Serve the production build on port 4310
+```
+
+Apply migrations before starting a production deployment. `npm start` does not run them.
+
+The database defaults to `openports.db` in the project directory. Set `DB_PATH` to use another location:
+
+```sh
+DB_PATH=/path/to/openports.db npm run dev
+```
+
+Use the same `DB_PATH` for migrations and the server. Back up the database before replacing or moving it.
+
+## Deployment limits
+
+There is no login or user isolation. Anyone with access to an instance can view and manage its targets. Keep it local or put it behind an access-controlled proxy.
+
+Ownership verification is required for active scans, except for the demo target. Domains resolving to private or reserved addresses are rejected.
+
+## Code layout
+
+- `src/app`: pages and API routes.
+- `src/components`: forms, scan reports, and live updates.
+- `src/lib`: scanning, verification, finding rules, scheduling, and report queries.
+- `src/db` and `drizzle`: schema and migrations.
+- `tests`: regression tests, including scan-claim concurrency and report rendering.

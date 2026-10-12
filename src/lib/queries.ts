@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
-import { findings, scans, targets } from "@/db/schema";
+import { findings, scans, targets, type FindingRow } from "@/db/schema";
 import { severityRank } from "./catalog";
 import {
   changesForScans,
@@ -133,6 +133,29 @@ function parsePorts(result: string | null): number[] {
   return parseScanResult(result)?.ports?.open ?? [];
 }
 
+function serializeFindings(rows: FindingRow[]): FindingView[] {
+  return rows
+    .map((finding) => {
+      let evidence: Record<string, unknown> = {};
+      try {
+        evidence = finding.evidence
+          ? (JSON.parse(finding.evidence) as Record<string, unknown>)
+          : {};
+      } catch {
+        // Malformed evidence must not prevent the report from loading.
+      }
+      return {
+        id: finding.id,
+        type: finding.type,
+        severity: finding.severity,
+        evidence,
+      };
+    })
+    .sort(
+      (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
+    );
+}
+
 export async function getTargetDetail(id: number): Promise<TargetDetail | null> {
   const [target] = await db
     .select()
@@ -187,25 +210,11 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
       .from(findings)
       .where(eq(findings.scanId, latestDone.id))
       .orderBy(desc(findings.id));
-    findingViews = rows.map((f) => {
-      let evidence: Record<string, unknown> = {};
-      try {
-        evidence = f.evidence ? (JSON.parse(f.evidence) as Record<string, unknown>) : {};
-      } catch {
-        evidence = {};
-      }
-      return { id: f.id, type: f.type, severity: f.severity, evidence };
-    });
-    // worst first: the report reads top down
-    findingViews.sort(
-      (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
-    );
+    findingViews = serializeFindings(rows);
     rawResult = parseScanResult(latestDone.result);
   }
 
-  // changes feed: latest done scan vs the one before, labeled with
-  // hysteresis from the scan before that. same recompute as the cross
-  // target feed on the dashboard.
+  // Both report feeds use three completed scans to confirm changes.
   const changes = changesForScans(doneScans.slice(0, 3), typesByScan);
 
   return {
@@ -222,21 +231,16 @@ export async function listTargetOverviews(): Promise<TargetOverview[]> {
   const out: TargetOverview[] = [];
 
   for (const t of targetRows) {
-    const [lastScan] = await db
+    const recentScans = await db
       .select()
       .from(scans)
       .where(eq(scans.targetId, t.id))
       .orderBy(desc(scans.id))
-      .limit(1);
-    const [lastDone] = await db
-      .select()
-      .from(scans)
-      .where(eq(scans.targetId, t.id))
-      .orderBy(desc(scans.id))
-      .limit(20)
-      .then((rows) => rows.filter((r) => r.status === "done"));
+      .limit(20);
+    const lastScan = recentScans[0];
+    const lastDone = recentScans.find((scan) => scan.status === "done");
 
-    let counts = { high: 0, medium: 0, low: 0, info: 0 };
+    const counts = { high: 0, medium: 0, low: 0, info: 0 };
     if (lastDone) {
       const rows = await db
         .select({ severity: findings.severity })
@@ -295,11 +299,8 @@ export interface RecentChanges {
   comparedTargets: number;
 }
 
-// the cross target changes feed: every target contributes the diff of its
-// newest done scan, recomputed exactly like the target page recomputes it,
-// so the two feeds cannot disagree. a target whose latest scan changed
-// nothing contributes nothing; older changes stay on the scan rows as the
-// audit trail.
+// Show only changes from each target's latest completed scan.
+// Recompute with the same confirmation rules as the target report.
 export async function listRecentChanges(): Promise<RecentChanges> {
   const targetRows = await db
     .select({ id: targets.id, domain: targets.domain })
@@ -353,13 +354,6 @@ export async function listRecentChanges(): Promise<RecentChanges> {
   return { entries, comparedTargets };
 }
 
-export async function getTargetDetailJson(id: number): Promise<TargetDetail | null> {
-  return getTargetDetail(id);
-}
-
-// the latest finished scan on this instance, for the landing page. real data
-// or nothing: when no scan has run yet the landing says so instead of
-// decorating.
 export interface LandingReport {
   domain: string;
   finishedAt: string | null;
@@ -382,18 +376,6 @@ export async function getLandingReport(): Promise<LandingReport | null> {
     .select()
     .from(findings)
     .where(eq(findings.scanId, row.scan.id));
-  const reportFindings: FindingView[] = findingRows.map((f) => {
-    let evidence: Record<string, unknown> = {};
-    try {
-      evidence = f.evidence ? (JSON.parse(f.evidence) as Record<string, unknown>) : {};
-    } catch {
-      evidence = {};
-    }
-    return { id: f.id, type: f.type, severity: f.severity, evidence };
-  });
-  reportFindings.sort(
-    (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id - b.id,
-  );
 
   return {
     domain: row.domain,
@@ -403,6 +385,6 @@ export async function getLandingReport(): Promise<LandingReport | null> {
         ? row.scan.finishedAt.getTime() - row.scan.startedAt.getTime()
         : null,
     openPorts: parsePorts(row.scan.result),
-    findings: reportFindings,
+    findings: serializeFindings(findingRows),
   };
 }

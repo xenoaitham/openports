@@ -1,8 +1,4 @@
-const REGISTER_VERBOSE = false;
-// starts the scan worker when the server process boots, so a queued scan
-// never sits waiting after a restart. scans caught mid flight by a restart
-// are marked failed first, all of them, so the scheduler does not wait on
-// stuck rows forever.
+// Release interrupted scans before starting the scheduler after a restart.
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { failInterruptedScans } = await import("./lib/claim");

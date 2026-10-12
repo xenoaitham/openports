@@ -8,13 +8,9 @@ import { isPreallowed } from "./host";
 import { pruneDoneScans } from "./retention";
 import { rescanDue, schedulerFields } from "./schedule";
 import { claimOneScan } from "./claim";
-import type { ScanResult } from "./scan-types";
+import { parseScanResult } from "./scan-types";
 
-// a small worker pool: up to WORKER_POOL_SIZE scans run at once. three,
-// because a small company watching a handful of domains wants a manual
-// burst to clear quickly, and the claim in claim.ts keeps one host from
-// ever being swept twice, so the cap only ever fans out across different
-// hosts. one plain constant like the cadence, no settings surface.
+// Claims prevent concurrent scans of the same host; the pool serves different hosts.
 export const WORKER_POOL_SIZE = 3;
 
 // the pool state lives on globals so next dev hot reloads do not start a
@@ -100,15 +96,6 @@ async function enqueueDueRescans() {
   }
 }
 
-function parseResult(row: ScanRow): ScanResult | null {
-  if (!row.result) return null;
-  try {
-    return JSON.parse(row.result) as ScanResult;
-  } catch {
-    return null;
-  }
-}
-
 async function previousDoneInput(
   targetId: number,
   beforeScanId: number,
@@ -130,7 +117,10 @@ async function previousDoneInput(
     .select({ type: findings.type })
     .from(findings)
     .where(eq(findings.scanId, row.id));
-  return { result: parseResult(row), findingTypes: types.map((t) => t.type) };
+  return {
+    result: parseScanResult(row.result),
+    findingTypes: types.map((finding) => finding.type),
+  };
 }
 
 async function runOne(scan: ScanRow, target: TargetRow) {
