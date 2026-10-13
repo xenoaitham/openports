@@ -1,8 +1,5 @@
 import { tlsResultsOf, parseScanResult, type ScanResult } from "./scan-types";
 
-// scan diff: what changed between the previous done scan and this one.
-// pure functions, same input, same output, no database, no network.
-
 export interface ScanDiff {
   portsOpened: { port: number; confirmed: boolean }[];
   portsClosed: { port: number; confirmed: boolean }[];
@@ -72,15 +69,8 @@ function rawDiff(prev: DiffInput, current: DiffInput): ScanDiff {
   };
 }
 
-// hysteresis. scanme's port 80 flips between runs, so a raw diff would cry
-// wolf on every scan. the call: a change is announced immediately but marked
-// unconfirmed until the scans agree. a change counts as confirmed when the
-// new state is already visible in the scan before the previous one, meaning
-// two of the last three scans agree on it. that covers both directions: a
-// state that held for two consecutive scans, and a one-scan flap that
-// reverted. announcing only confirmed changes instead would hide a real
-// opened port for a whole scan cycle, which is the worst trade for a
-// monitor. the label carries the doubt instead.
+// Confirm the latest transition if its new state also occurred two scans earlier.
+// Only current transitions are returned; see docs/design.md for examples.
 export function diffWithHysteresis(
   prevPrev: DiffInput | null,
   prev: DiffInput,
@@ -121,10 +111,7 @@ export function diffIsEmpty(diff: ScanDiff): boolean {
   );
 }
 
-// the changes view for one target: the newest done scan against the one
-// before it, labeled with hysteresis from the scan before that. the target
-// page and the cross target feed on the dashboard both call this with the
-// same three scans, so the two feeds cannot disagree.
+// Both report feeds use the same three completed scans, newest first.
 export function changesForScans(
   // newest first, at most the last three done scans of one target
   doneScans: { id: number; result: string | null; startedAt: Date | null }[],

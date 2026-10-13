@@ -114,7 +114,7 @@ test("with validation on, the rejection reason is the finding", () => {
   }
 });
 
-test("a handshake that failed for connectivity reasons is not a cert finding", () => {
+test("connection failures do not produce certificate findings", () => {
   const findings = evaluateScanResult(
     baseResult({
       tls: [
@@ -125,7 +125,7 @@ test("a handshake that failed for connectivity reasons is not a cert finding", (
   assert.deepEqual(findings, []);
 });
 
-test("no tls at all is not invented into a cert finding", () => {
+test("absent TLS checks do not produce certificate findings", () => {
   const result = baseResult({
     tls: [{ port: 443, checked: false, ok: false, error: "the port was not open" }],
   });

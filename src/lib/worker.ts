@@ -13,8 +13,7 @@ import { parseScanResult } from "./scan-types";
 // Claims prevent concurrent scans of the same host; the pool serves different hosts.
 export const WORKER_POOL_SIZE = 3;
 
-// the pool state lives on globals so next dev hot reloads do not start a
-// second set of loops and run scans twice.
+// Keep one pool across Next.js development hot reloads.
 type WorkerGlobal = typeof globalThis & {
   __openportsTimer?: NodeJS.Timeout;
   __openportsWorkers?: number;
@@ -35,10 +34,7 @@ export async function enqueueScan(targetId: number) {
   pump();
 }
 
-// start a loop for every free slot. each loop claims in a tight cycle and
-// exits when nothing claimable is left; the interval tops the pool back up
-// two seconds later at the latest. the counter moves synchronously at loop
-// start, so overlapping pumps cannot overshoot the cap.
+// Each loop increments the counter before awaiting, keeping overlapping pumps bounded.
 function pump() {
   const free = WORKER_POOL_SIZE - (g.__openportsWorkers ?? 0);
   for (let i = 0; i < free; i += 1) void workerLoop();
@@ -63,9 +59,7 @@ async function workerLoop() {
 }
 
 async function tick() {
-  // one scheduler pass at a time, so two overlapping ticks cannot both read
-  // a target as idle and queue it twice. a pass that is still running only
-  // skips the pass; the pump still runs.
+  // Serialize scheduler passes to avoid queuing the same idle target twice.
   if (!g.__openportsPassing) {
     g.__openportsPassing = true;
     try {
@@ -77,12 +71,7 @@ async function tick() {
   pump();
 }
 
-// the scheduled pass over verified targets. a target is due when its newest
-// finished scan of any status is older than the cadence, or when it has
-// none. a target that already has a queued or running scan is skipped, so a
-// scheduled rescan never piles up behind a scan that has not run yet; once
-// that scan lands, its finish time resets the cadence and the next tick
-// sees the target as quiet.
+// Skip active targets. Completed and failed attempts both reset the six-hour interval.
 async function enqueueDueRescans() {
   const rows = await db
     .select(schedulerFields)

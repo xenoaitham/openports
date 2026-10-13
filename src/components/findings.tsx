@@ -9,8 +9,7 @@ export default function FindingsList({ findings }: { findings: FindingView[] }) 
   if (findings.length === 0) {
     return (
       <p className="mt-3 text-sm text-muted">
-        Nothing found. Every check came back clean. That is a real result, not
-        a missing check.
+        No findings from the checks completed in this scan.
       </p>
     );
   }

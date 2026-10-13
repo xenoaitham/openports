@@ -7,9 +7,9 @@ import { formatDuration, timeAgo } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "OpenPorts, outside-in monitoring",
+  title: "Domain exposure monitoring",
   description:
-    "Point OpenPorts at a domain and it reports open ports, TLS expiry, mail records and header hygiene. Add a domain, prove it is yours, read the report.",
+    "Check public ports, certificate validity, DNS mail records, and HTTP configuration for domains you manage.",
 };
 
 const btn =
@@ -22,13 +22,11 @@ export default async function Home() {
     <main className="mx-auto max-w-5xl px-4">
       <section className="pb-10 pt-14">
         <h1 className="max-w-3xl text-4xl font-medium leading-tight tracking-tight">
-          OpenPorts watches your domains from the outside and reports what
-          they expose.
+          Monitor domain exposure and scan changes.
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-muted">
-          Open ports, a TLS certificate on its way out, mail records that let
-          anyone spoof you, headers that give away the stack. Every finding
-          comes with the fix, written out.
+          Review open ports, certificate problems, mail records, and HTTP
+          configuration. Findings include evidence and suggested fixes.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-5">
           <Link href="/app" className={btn}>
@@ -51,9 +49,7 @@ export default async function Home() {
               <span className="font-mono text-xs text-ink">
                 {report.openPorts.join(", ") || "none"}
               </span>
-              . The Nmap project runs that host for scanner testing, so it is
-              scanned without the ownership record. Nothing on this page is
-              staged.
+              .
             </p>
             <div className="mt-4">
               <FindingsList findings={report.findings} />
@@ -63,7 +59,7 @@ export default async function Home() {
           <p className="mt-2 max-w-2xl text-sm text-muted">
             No scan has finished on this instance yet. Run{" "}
             <code className="font-mono text-xs text-ink">npm run seed</code>{" "}
-            to scan scanme.nmap.org for real, or add a domain under targets:
+            for an occasional test scan, or add a domain under targets:
             the latest report then shows up here.
           </p>
         )}
@@ -72,9 +68,9 @@ export default async function Home() {
       <section className="border-t border-line py-10">
         <h2 className="text-base font-medium">How a scan gets allowed</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Adding a domain never triggers a scan by itself. You prove
-          ownership with one DNS record, and the worker rechecks that record
-          before it touches the network:
+          Publish the DNS TXT record shown on the target page and check
+          verification. The worker checks the target's stored verification
+          status before scanning:
         </p>
         <div className="mt-4 border-b border-t border-line py-3 font-mono text-sm">
           <span className="text-ink">_openports.your-domain.com</span>
@@ -98,7 +94,7 @@ export default async function Home() {
               [
                 [
                   "TCP sweep",
-                  "the 100 ports most likely to be open, plain connect, nothing sent, no service probing",
+                  "TCP connections to 100 common ports, followed by short banner checks",
                   "remote access port exposed, unexpected open port",
                 ],
                 [
@@ -113,7 +109,7 @@ export default async function Home() {
                 ],
                 [
                   "HTTP",
-                  "HSTS header, the http to https redirect, Server banner",
+                  "HSTS header, HTTP-to-HTTPS redirect, Server banner",
                   "missing HSTS, no redirect, banner disclosure",
                 ],
               ] as const
@@ -134,20 +130,19 @@ export default async function Home() {
       </section>
 
       <section className="border-t border-line py-10">
-        <h2 className="text-base font-medium">Limits, stated plainly</h2>
+        <h2 className="text-base font-medium">Limits</h2>
         <ul className="mt-3 max-w-2xl list-disc space-y-2 pl-5 text-sm text-muted">
           <li>
             There are no accounts. Anything added to this instance is visible
             to everyone holding the URL.
           </li>
           <li>
-            The scanner is a monitor, not an attack tool. It completes TCP
-            handshakes and reads what servers volunteer. It never exploits
-            anything.
+            Results describe exposure and configuration. They do not establish
+            whether a service has an exploitable vulnerability.
           </li>
           <li>
-            One process, one SQLite file. That is deliberate until the boring
-            way stops working.
+            Run one server process with its SQLite database. Only scan domains
+            you own or have permission to scan.
           </li>
         </ul>
       </section>

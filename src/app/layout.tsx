@@ -5,11 +5,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("http://localhost:4310"),
   title: {
-    default: "OpenPorts, outside-in monitoring",
+    default: "OpenPorts: domain exposure monitoring",
     template: "%s - OpenPorts",
   },
   description:
-    "OpenPorts watches your domains from the outside: open ports, TLS expiry, mail spoofing, header hygiene. Add a domain, prove it is yours, read the report.",
+    "Monitor public ports, certificate validity, DNS mail records, and HTTP configuration for domains you manage.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="flex-1">{children}</div>
         <footer className="border-t border-line">
           <div className="mx-auto max-w-5xl px-4 h-11 flex items-center text-xs text-muted">
-            no accounts yet, one sqlite file, scans only after TXT verification
+            Single-instance monitor. No built-in authentication.
           </div>
         </footer>
       </body>
