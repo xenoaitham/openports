@@ -3,169 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenPorts, a demo preview</title>
+<title>OpenPorts: demo preview</title>
+<meta name="description" content="OpenPorts is an early cybersecurity project for checking domain exposure: ports, TLS, DNS and HTTP configuration. Preview the interface and run it locally.">
+<link rel="canonical" href="https://xenoaitham.github.io/openports/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenPorts: demo preview">
+<meta property="og:description" content="A preview of OpenPorts, an early cybersecurity project for monitoring domain exposure. Run it locally to check domains you own.">
+<meta property="og:url" content="https://xenoaitham.github.io/openports/">
+<meta property="og:image" content="https://xenoaitham.github.io/openports/img/dashboard.png">
+<meta property="og:image:alt" content="OpenPorts target dashboard with recent scan status">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenPorts: demo preview">
+<meta name="twitter:description" content="Check domain exposure with OpenPorts. Browse the interface and run it locally.">
+<meta name="twitter:image" content="https://xenoaitham.github.io/openports/img/dashboard.png">
 <style>
   body { margin: 0; background: #faf9f5; color: #1a1a18;
          font: 16px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px 72px; }
   header { border-bottom: 1px solid #d8d6cd; }
   header .wrap { display: flex; justify-content: space-between; align-items: center;
-                 padding: 14px 24px; }
+                 gap: 16px; padding: 14px 24px; }
   .logo { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
   header a { font-size: 14px; }
-  a { color: inherit; }
-  h1 { font-size: 36px; line-height: 1.15; margin: 56px 0 10px; }
-  h2 { font-size: 20px; margin: 56px 0 10px; padding-bottom: 6px;
+  a { color: inherit; text-underline-offset: 3px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 56px 0 16px; }
+  h2 { font-size: 20px; margin: 48px 0 10px; padding-bottom: 6px;
        border-bottom: 1px solid #d8d6cd; }
-  .lede { font-size: 18px; color: #44423c; max-width: 660px; }
-  .mono, code, pre { font-family: ui-monospace, Menlo, Consolas, monospace;
-                     font-size: 0.92em; }
+  .lede { font-size: 18px; color: #44423c; max-width: 680px; }
+  code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; }
   pre { background: #f1efe8; border: 1px solid #d8d6cd; padding: 12px 16px;
         overflow-x: auto; }
-  figure { margin: 20px 0 44px; }
-  figure img { width: 100%; border: 1px solid #d8d6cd; display: block; }
+  figure { margin: 20px 0 36px; }
+  figure img { width: 100%; height: auto; box-sizing: border-box;
+               border: 1px solid #d8d6cd; display: block; }
   figcaption { font-size: 13px; color: #6b6960; margin-top: 8px; }
   ul { padding-left: 20px; margin: 10px 0; }
   li { margin: 5px 0; }
-  .note { font-size: 14px; color: #6b6960; }
-  footer { border-top: 1px solid #d8d6cd; margin-top: 72px; padding-top: 16px;
+  footer { border-top: 1px solid #d8d6cd; margin-top: 56px; padding-top: 16px;
            font-size: 13px; color: #6b6960; }
+  @media (max-width: 600px) {
+    h1 { font-size: 30px; margin-top: 36px; }
+    .wrap { padding: 0 20px 48px; }
+    header .wrap { padding: 14px 20px; }
+  }
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
     <span class="logo">openports_</span>
-    <a href="https://github.com/xenoaitham/openports">source on github</a>
+    <a href="https://github.com/xenoaitham/openports">Source on GitHub</a>
   </div>
 </header>
-<div class="wrap">
+<main class="wrap">
+<h1>OpenPorts: demo preview</h1>
+<p class="lede">I wanted to build a SaaS for cybersecurity. OpenPorts is an early step:
+a tool for checking what a domain exposes and tracking changes between scans.</p>
+<p>The current version runs as a single instance without accounts or authentication.
+It checks common TCP ports, TLS certificates, mail-related DNS records and HTTP headers.
+Findings cover exposure and configuration; this is not a vulnerability assessment.</p>
 
-<h1>OpenPorts watches your domains from the outside and reports what they expose.</h1>
-<p class="lede">Open ports, TLS certificates on their way out, mail records that let anyone
-spoof you, headers that give away the stack. Add a domain, prove ownership with one
-DNS record, and see what the internet sees.</p>
-
-<h2>Try it</h2>
-<p><a href="https://epinions-lots-souls-gates.trycloudflare.com">live demo</a>:
-the real app, running against
-<span class="mono">scanme.nmap.org</span>, the host the Nmap project runs for scanner
-testing. Press <span class="mono">run scan again</span> and a fresh scan finishes in
-about four seconds.</p>
-<p class="note">The live demo runs on a home machine behind a tunnel, so it is only up
-when that machine is. Everything on this page, and the app itself, always works
-locally:</p>
-<pre>npm install
+<h2>Run it locally</h2>
+<p>This page is a static preview. For the application, clone the
+<a href="https://github.com/xenoaitham/openports">repository</a> and run:</p>
+<pre>npm ci
 npm run dev</pre>
-<p>Then open <span class="mono">http://localhost:4310</span>. Tests:
-<span class="mono">npm test</span>, 56 passing.</p>
+<p>Open <a href="http://localhost:4310">http://localhost:4310</a>.
+Run tests with <code>npm test</code>. See the
+<a href="https://github.com/xenoaitham/openports/blob/main/README.md">README</a>
+for requirements and database configuration.</p>
+<p>Only scan domains you own or have permission to scan.</p>
 
-<h2>What a scan gets you</h2>
-
+<h2>Inside the application</h2>
+<p>Screenshots from the initial release show recorded scan data.</p>
 <figure>
-  <img src="img/01-landing.png" alt="landing page with a real scanme.nmap.org report">
-  <figcaption>The landing leads with a real report from the instance's own database,
-  findings worst first, each with the fix written out. Nothing is staged.</figcaption>
+  <img src="img/dashboard.png" alt="Target dashboard showing scan status and recent changes" loading="lazy">
+  <figcaption>Targets and recent changes</figcaption>
+</figure>
+<figure>
+  <img src="img/verification.png" alt="DNS TXT record instructions for domain verification" loading="lazy">
+  <figcaption>Domain verification</figcaption>
+</figure>
+<figure>
+  <img src="img/findings.png" alt="Scan report with port results and findings" loading="lazy">
+  <figcaption>Scan findings</figcaption>
+</figure>
+<figure>
+  <img src="img/history.png" alt="Scan history showing previous scan results" loading="lazy">
+  <figcaption>Scan history</figcaption>
 </figure>
 
-<figure>
-  <img src="img/02-dashboard-empty.png" alt="empty dashboard with a plain sentence">
-  <figcaption>A fresh instance says exactly what it is and what to do next.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/04-verify-instructions.png" alt="TXT record instructions for a pending domain">
-  <figcaption>Adding a domain: one TXT record to publish at your DNS provider.
-  Nothing is port scanned until this check passes.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/05-verify-failed.png" alt="a real failed DNS check, printed in ink">
-  <figcaption>The check runs for real. example.com has no record; the page says so
-  plainly, because not having published it yet is the normal state.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/06-scan-queued.png" alt="a queued scan behind a running one">
-  <figcaption>A queued scan waiting behind a running one. The worker pool runs up to
-  three scans at once, but the claim is polite: one host is never swept from two
-  workers at the same time.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/07-scan-running.png" alt="a scan in progress">
-  <figcaption>A scan in progress: the port sweep first, then TLS, DNS and HTTP checks.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/03-dashboard.png" alt="dashboard with targets, changed column and changes feed">
-  <figcaption>The dashboard: every target, when it last changed, and one cross target
-  changes feed. Both feeds recompute from one shared function, so they cannot
-  disagree.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/09-findings.png" alt="the full scan result table with findings worst first">
-  <figcaption>The report: the whole scan result as a table, then findings worst first.
-  The demo host's port 80 gave two different answers seconds apart, and the row
-  prints both instead of picking one.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/12-changes.png" alt="changes since the previous scan">
-  <figcaption>Every scan is diffed against the previous one. A change is marked
-  unconfirmed until the next scan sees the same thing, so a flapping port does not
-  cry wolf.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/10-history.png" alt="scan history table">
-  <figcaption>Scan history: what each scan took, what it found. The last 100 done
-  scans are kept per target, older ones pruned with their findings.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/11-raw-output.png" alt="raw scan output expanded">
-  <figcaption>The raw scan output, one click away, never summarized away.</figcaption>
-</figure>
-
-<figure>
-  <img src="img/08-scan-failed.png" alt="a failed scan with its cause recorded">
-  <figcaption>Failures are recorded with their cause, not hidden. Verified targets
-  are then rescanned every six hours on their own, and a target whose scans fail
-  still gets retried at the cadence, not on every tick.</figcaption>
-</figure>
-
-<h2>How it works</h2>
+<h2>Scope and limits</h2>
 <ul>
-  <li>Ownership gate: publish one TXT record at <span class="mono">_openports.&lt;domain&gt;</span>
-  and the scanner runs. The worker rechecks verification before touching the network,
-  so there is no bypass path. The single exception is
-  <span class="mono">scanme.nmap.org</span>, which the Nmap project runs for scanner
-  testing.</li>
-  <li>Modest probe budget: one TCP connect sweep over the 100 most common ports, a
-  greeting listen, one http GET if a port stays quiet, certificate reads on the TLS
-  ports. Nothing else is ever sent.</li>
-  <li>Diffs with hysteresis: changes show up immediately, tagged unconfirmed, and
-  turn confirmed once two of the last three scans agree.</li>
-  <li>Six hour cadence, a worker pool of three behind one atomic claim, and the last
-  100 done scans kept per target. No redis, no docker, no queue service.</li>
+  <li>Domain verification uses a DNS TXT record. Verification checks are covered by tests.</li>
+  <li>Scanning covers common TCP ports, not every port or protocol.</li>
+  <li>Results reflect one point in time. Network failures and changing services can affect findings.</li>
+  <li>The application uses one SQLite database and one process. Keep it local or restrict access externally.</li>
 </ul>
-
-<h2>Limits, stated plainly</h2>
-<ul>
-  <li>No accounts, no auth. Run it locally or behind something that gates access.</li>
-  <li>One SQLite file, one process. It is a tool for one company's own instance.</li>
-  <li>The scan history is bounded at 100 done scans per target.</li>
-</ul>
-
+<p>The <a href="https://github.com/xenoaitham/openports/blob/main/docs/design.md">design notes</a>
+explain the storage and change-confirmation choices.
+See <a href="https://github.com/xenoaitham/openports/blob/main/SECURITY.md">SECURITY.md</a>
+for reporting security issues.</p>
 <footer>
-  OpenPorts 1.0.0, source and full history at
-  <a href="https://github.com/xenoaitham/openports">github.com/xenoaitham/openports</a>.
-  Every screenshot on this page is the real app against real data, taken from the
-  production build tagged v1.0.0.
+  OpenPorts: <a href="https://github.com/xenoaitham/openports">source on GitHub</a>.
+  Released under the <a href="https://github.com/xenoaitham/openports/blob/main/LICENSE">MIT License</a>.
 </footer>
-
-</div>
+</main>
 </body>
 </html>
