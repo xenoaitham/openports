@@ -35,6 +35,7 @@
   pre { background: #f1efe8; border: 1px solid #d8d6cd; padding: 12px 16px;
         overflow-x: auto; }
   figure { margin: 20px 0 36px; }
+  video { display: block; width: 100%; height: auto; border: 1px solid #d8d6cd; box-sizing: border-box; }
   figure img { width: 100%; height: auto; box-sizing: border-box;
                border: 1px solid #d8d6cd; display: block; }
   figcaption { font-size: 13px; color: #6b6960; margin-top: 8px; }
@@ -74,6 +75,16 @@ Run tests with <code>npm test</code>. See the
 <a href="https://github.com/xenoaitham/openports/blob/main/README.md">README</a>
 for requirements and database configuration.</p>
 <p>Only scan domains you own or have permission to scan.</p>
+
+<h2>Local startup walkthrough</h2>
+<figure>
+  <video controls preload="metadata" poster="media/local-startup.png" aria-label="Local startup walkthrough showing an empty OpenPorts instance" aria-describedby="walkthrough-caption">
+    <source src="media/local-startup.mp4" type="video/mp4">
+    Your browser cannot play this video. <a href="media/local-startup.mp4">Download the walkthrough</a>.
+  </video>
+  <figcaption id="walkthrough-caption">A fresh local instance: the landing page and empty targets screen. No targets are submitted and no scans run.</figcaption>
+</figure>
+<p><a href="media/local-startup.mp4" download>Download the walkthrough (MP4)</a>.</p>
 
 <h2>Inside the application</h2>
 <p>Screenshots from the initial release show recorded scan data.</p>
