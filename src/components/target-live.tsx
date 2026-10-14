@@ -20,13 +20,16 @@ function ChangesBlock({ since, diff }: { since: string | null; diff: ScanDiff })
       </p>
       <ChangesList diff={diff} />
       <p className="mt-2 text-xs text-muted">
-        A change is unconfirmed until the next scan sees the same thing.
+        A transition is confirmed when the same state was seen two scans earlier.
       </p>
     </div>
   );
 }
 
-export default function TargetLive({ initial }: { initial: TargetDetail }) {
+export default function TargetLive({ initial, publicDemo = false }: {
+  initial: TargetDetail;
+  publicDemo?: boolean;
+}) {
   const [detail, setDetail] = useState(initial);
 
   // server re-renders hand down a fresh snapshot (after verify or rescan)
@@ -87,7 +90,7 @@ export default function TargetLive({ initial }: { initial: TargetDetail }) {
         </p>
       )}
 
-      {target.status !== "verified" && (
+      {!publicDemo && target.status !== "verified" && (
         <div className="mt-8">
           <VerifyPanel target={target} />
         </div>

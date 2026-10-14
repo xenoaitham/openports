@@ -2,7 +2,9 @@
 
 I started OpenPorts because I wanted to build a cybersecurity SaaS. This version is a domain-exposure monitor: it checks open ports and configuration, records changes, and suggests fixes. It does not test for exploitable vulnerabilities.
 
-For now, it is a single-instance tool without accounts. Run it locally or behind an access-controlled proxy. [Preview](https://xenoaitham.github.io/openports).
+For now, it is a single-instance tool without accounts. Run it locally or behind an access-controlled proxy. [Try the live demo](https://openports-live-xenoaitham.web.app).
+
+The shared demo uses only `scanme.nmap.org`, with one scan every six hours. Its server runs on my machine, so availability depends on that machine staying online.
 
 ## Run locally
 
@@ -65,3 +67,5 @@ Ownership verification is required for active scans, except for the demo target.
 ## Project notes
 
 [Design](docs/design.md) covers storage, scheduling, and change confirmation. Report security issues through the channel in [SECURITY.md](SECURITY.md). The code is available under the [MIT license](LICENSE).
+
+For a public interactive instance, use the restricted [live demo mode](docs/live-demo.md). It runs the application against the built-in test target with a shared scan limit.

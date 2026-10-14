@@ -18,12 +18,14 @@ import type {
   TargetView,
 } from "./view-types";
 import { parseScanResult, type ScanResult } from "./scan-types";
+import { DEMO_DOMAIN, DEMO_READ_ONLY_MESSAGE, isPublicDemo, type EnqueueResult } from "./demo";
 
 export type CreateResult =
   | { ok: true; id: number }
   | { ok: false; error: string };
 
 export async function createTarget(input: string): Promise<CreateResult> {
+  if (isPublicDemo()) return { ok: false, error: DEMO_READ_ONLY_MESSAGE };
   const domain = normalizeDomain(input);
   if (!domain) {
     return { ok: false, error: "that does not look like a domain name" };
@@ -70,6 +72,7 @@ export type VerifyResult =
   | { ok: false; error: string };
 
 export async function verifyTarget(id: number): Promise<VerifyResult> {
+  if (isPublicDemo()) return { ok: false, error: DEMO_READ_ONLY_MESSAGE };
   const [target] = await db
     .select()
     .from(targets)
@@ -98,21 +101,24 @@ export async function verifyTarget(id: number): Promise<VerifyResult> {
 
 export async function rescanTarget(
   id: number,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<EnqueueResult> {
   const [target] = await db
     .select()
     .from(targets)
     .where(eq(targets.id, id))
     .limit(1);
   if (!target) return { ok: false, error: "target not found" };
+  if (isPublicDemo() && target.domain !== DEMO_DOMAIN) {
+    return { ok: false, error: "The public demo only scans scanme.nmap.org." };
+  }
   if (target.status !== "verified" && !isPreallowed(target.domain)) {
     return { ok: false, error: "verify ownership before scanning" };
   }
-  await enqueueScan(id);
-  return { ok: true };
+  return enqueueScan(id);
 }
 
 export async function deleteTarget(id: number): Promise<void> {
+  if (isPublicDemo()) throw new Error(DEMO_READ_ONLY_MESSAGE);
   await db.delete(targets).where(eq(targets.id, id));
 }
 
@@ -163,6 +169,7 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
     .where(eq(targets.id, id))
     .limit(1);
   if (!target) return null;
+  if (isPublicDemo() && target.domain !== DEMO_DOMAIN) return null;
 
   const scanRows = await db
     .select()
@@ -227,7 +234,9 @@ export async function getTargetDetail(id: number): Promise<TargetDetail | null> 
 }
 
 export async function listTargetOverviews(): Promise<TargetOverview[]> {
-  const targetRows = await db.select().from(targets).orderBy(desc(targets.id));
+  const targetRows = await db.select().from(targets)
+    .where(isPublicDemo() ? eq(targets.domain, DEMO_DOMAIN) : undefined)
+    .orderBy(desc(targets.id));
   const out: TargetOverview[] = [];
 
   for (const t of targetRows) {
@@ -305,6 +314,7 @@ export async function listRecentChanges(): Promise<RecentChanges> {
   const targetRows = await db
     .select({ id: targets.id, domain: targets.domain })
     .from(targets)
+    .where(isPublicDemo() ? eq(targets.domain, DEMO_DOMAIN) : undefined)
     .orderBy(desc(targets.id));
 
   const perTarget = new Map<number, (typeof scans.$inferSelect)[]>();
@@ -367,7 +377,7 @@ export async function getLandingReport(): Promise<LandingReport | null> {
     .select({ scan: scans, domain: targets.domain })
     .from(scans)
     .innerJoin(targets, eq(scans.targetId, targets.id))
-    .where(eq(scans.status, "done"))
+    .where(and(eq(scans.status, "done"), isPublicDemo() ? eq(targets.domain, DEMO_DOMAIN) : undefined))
     .orderBy(desc(scans.id))
     .limit(1);
   if (!row) return null;

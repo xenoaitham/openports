@@ -3,6 +3,7 @@ import Link from "next/link";
 import FindingsList from "@/components/findings";
 import { getLandingReport } from "@/lib/queries";
 import { formatDuration, timeAgo } from "@/lib/format";
+import { isPublicDemo } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function Home() {
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-5">
           <Link href="/app" className={btn}>
-            add a domain
+            {isPublicDemo() ? "open live demo" : "add a domain"}
           </Link>
         </div>
       </section>

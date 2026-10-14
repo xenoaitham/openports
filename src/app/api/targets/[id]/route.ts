@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { deleteTarget, getTargetDetail } from "@/lib/queries";
 import { ensureWorker } from "@/lib/worker";
+import { isPublicDemo, DEMO_READ_ONLY_MESSAGE } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (isPublicDemo()) {
+    return NextResponse.json({ error: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
+  }
   const { id } = await params;
   const targetId = parseId(id);
   if (!targetId) {

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { createTarget, listTargetOverviews } from "@/lib/queries";
 import { ensureWorker } from "@/lib/worker";
+import { isPublicDemo, DEMO_READ_ONLY_MESSAGE } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (isPublicDemo()) {
+    return NextResponse.json({ error: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
+  }
   let body: { domain?: unknown };
   try {
     body = (await request.json()) as { domain?: unknown };

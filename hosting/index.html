@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Try the OpenPorts app in your browser. Explore reports and run a restricted demo scan without installing anything.">
+  <title>OpenPorts live demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { display: flex; flex-direction: column; background: #fafaf7; color: #1c1e1a; font: 14px/1.4 system-ui, sans-serif; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 12px 18px; border-bottom: 1px solid #e2e4db; }
+    header strong { font-size: 16px; }
+    header p { margin: 0; flex: 1; }
+    a { color: inherit; text-underline-offset: 3px; }
+    iframe { display: block; width: 100%; flex: 1; min-height: 400px; border: 0; background: white; }
+    .skip { position: absolute; left: -10000px; }
+    .skip:focus { position: static; padding: 8px; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#live-app">Skip to live app</a>
+  <header>
+    <strong>OpenPorts live demo</strong>
+    <p>The app runs on my machine. It is available while that machine and its tunnel are running.</p>
+    <a href="__APP_ORIGIN__/app" target="_blank" rel="noopener noreferrer">Open live app in a new tab</a>
+    <a href="https://github.com/xenoaitham/openports">Source</a>
+  </header>
+  <iframe id="live-app" title="Interactive OpenPorts demo" src="__APP_ORIGIN__/app" referrerpolicy="no-referrer"></iframe>
+</body>
+</html>

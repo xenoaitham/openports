@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import TargetLive from "@/components/target-live";
 import { getTargetDetail } from "@/lib/queries";
+import { isPublicDemo } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +30,5 @@ export default async function TargetPage({
   if (!Number.isInteger(targetId) || targetId <= 0) notFound();
   const detail = await getTargetDetail(targetId);
   if (!detail) notFound();
-  return <TargetLive initial={detail} />;
+  return <TargetLive initial={detail} publicDemo={isPublicDemo()} />;
 }

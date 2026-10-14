@@ -14,7 +14,13 @@ export async function POST(
   }
   const result = await rescanTarget(targetId);
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json(
+      { error: result.error, retryAfterSeconds: result.retryAfterSeconds },
+      {
+        status: result.retryAfterSeconds ? 429 : 400,
+        headers: result.retryAfterSeconds ? { "Retry-After": String(result.retryAfterSeconds) } : undefined,
+      },
+    );
   }
   return NextResponse.json({ ok: true });
 }

@@ -1,0 +1,13 @@
+**
+!package.json
+!package-lock.json
+!next.config.ts
+!postcss.config.mjs
+!tsconfig.json
+!LICENSE
+!src/
+!src/**
+!scripts/
+!scripts/migrate.ts
+!drizzle/
+!drizzle/**

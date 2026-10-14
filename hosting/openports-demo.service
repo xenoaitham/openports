@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenPorts demo tunnel and Firebase entry page
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/potato/Saas/openports
+Environment=GCLOUD_BIN=/home/potato/google-cloud-sdk/bin/gcloud
+Environment=CLOUDFLARED_BIN=/home/potato/.local/bin/cloudflared
+ExecStart=/home/potato/.nvm/versions/node/v22.23.2/bin/node hosting/run-tunnel.mjs
+Restart=always
+RestartSec=30
+KillMode=control-group
+TimeoutStopSec=15
+UMask=0077
+
+[Install]
+WantedBy=default.target

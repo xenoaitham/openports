@@ -9,6 +9,7 @@ import { pruneDoneScans } from "./retention";
 import { rescanDue, schedulerFields } from "./schedule";
 import { claimOneScan } from "./claim";
 import { parseScanResult } from "./scan-types";
+import { admitDemoScan, DEMO_DOMAIN, isPublicDemo, type EnqueueResult } from "./demo";
 
 // Claims prevent concurrent scans of the same host; the pool serves different hosts.
 export const WORKER_POOL_SIZE = 3;
@@ -28,10 +29,16 @@ export function ensureWorker() {
   }
 }
 
-export async function enqueueScan(targetId: number) {
-  await db.insert(scans).values({ targetId, status: "queued" });
+export async function enqueueScan(targetId: number): Promise<EnqueueResult> {
+  if (isPublicDemo()) {
+    const result = admitDemoScan(db, targetId);
+    if (!result.ok) return result;
+  } else {
+    await db.insert(scans).values({ targetId, status: "queued" });
+  }
   ensureWorker();
   pump();
+  return { ok: true };
 }
 
 // Each loop increments the counter before awaiting, keeping overlapping pumps bounded.
@@ -81,7 +88,7 @@ async function enqueueDueRescans() {
   for (const row of rows) {
     if (row.active) continue;
     if (!rescanDue(row.lastAttemptAt ?? null, now)) continue;
-    await db.insert(scans).values({ targetId: row.id, status: "queued" });
+    await enqueueScan(row.id);
   }
 }
 
@@ -114,6 +121,9 @@ async function previousDoneInput(
 
 async function runOne(scan: ScanRow, target: TargetRow) {
   try {
+    if (isPublicDemo() && target.domain !== DEMO_DOMAIN) {
+      throw new Error("The public demo only scans scanme.nmap.org.");
+    }
     // hard line: active scans need ownership proof. scanme.nmap.org is the
     // single exception, the Nmap project allows scanning it.
     if (target.status !== "verified" && !isPreallowed(target.domain)) {

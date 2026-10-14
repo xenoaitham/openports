@@ -5,6 +5,7 @@ import { changeLines } from "@/components/changes";
 import { listRecentChanges, listTargetOverviews } from "@/lib/queries";
 import { RESCAN_INTERVAL_MS } from "@/lib/schedule";
 import { timeAgo } from "@/lib/format";
+import { isPublicDemo } from "@/lib/demo";
 import type { TargetOverview } from "@/lib/view-types";
 
 export const metadata: Metadata = {
@@ -25,12 +26,17 @@ export default async function AppPage() {
     <main className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="text-2xl font-medium tracking-tight">Targets</h1>
       <p className="mt-1 text-sm text-muted">
-        Add a domain. It gets scanned after you prove ownership with one DNS
-        record, never before. Verified targets are then rescanned every{" "}
-        {RESCAN_INTERVAL_MS / 3_600_000} hours on their own.
+        {isPublicDemo() ? (
+          <>Open the demo target to inspect its report, scan history, and raw output.</>
+        ) : (
+          <>
+            Add a domain and verify its DNS TXT record before scanning.
+            Verified targets are rescanned every {RESCAN_INTERVAL_MS / 3_600_000} hours.
+          </>
+        )}
       </p>
 
-      <AddTargetForm />
+      {!isPublicDemo() && <AddTargetForm />}
 
       {targets.length === 0 ? (
         <p className="mt-10 max-w-2xl text-sm text-muted">
@@ -38,77 +44,79 @@ export default async function AppPage() {
           publish; the first scan starts once it checks out.
         </p>
       ) : (
-        <table className="mt-8 w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-linestrong text-left">
-              {[
-                "domain",
-                "status",
-                "last scan",
-                "changed",
-                "open ports",
-                "findings",
-              ].map((name) => (
-                <th
-                  key={name}
-                  className="py-2 pr-6 text-xs font-normal text-muted"
-                >
-                  {name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {targets.map((target) => (
-              <tr key={target.id} className="border-b border-line">
-                <td className="py-2 pr-6">
-                  <a
-                    href={`/targets/${target.id}`}
-                    className="font-mono text-sm text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
+        <div className="mt-8 overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-linestrong text-left">
+                {[
+                  "domain",
+                  "status",
+                  "last scan",
+                  "changed",
+                  "open ports",
+                  "findings",
+                ].map((name) => (
+                  <th
+                    key={name}
+                    className="py-2 pr-6 text-xs font-normal text-muted"
                   >
-                    {target.domain}
-                  </a>
-                </td>
-                <td className="py-2 pr-6">
-                  <TargetStatusWord status={target.status} />
-                </td>
-                <td className="py-2 pr-6">
-                  {target.lastScan ? (
-                    <span
-                      className="flex items-baseline gap-3"
-                      // relative time is a snapshot printed at render time
-                      suppressHydrationWarning
-                    >
-                      <ScanStatusWord status={target.lastScan.status} />
-                      <span className="font-mono text-xs text-muted">
-                        {lastScanTime(target)}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-muted">never</span>
-                  )}
-                </td>
-                <td
-                  className="py-2 pr-6 font-mono text-xs text-muted"
-                  suppressHydrationWarning
-                >
-                  {target.lastChangeAt ? timeAgo(target.lastChangeAt) : "-"}
-                </td>
-                <td className="py-2 pr-6 font-mono text-xs text-muted">
-                  {target.openPorts.length > 0
-                    ? target.openPorts.join(", ")
-                    : "-"}
-                </td>
-                <td className="py-2 pr-6">
-                  <Counts
-                    counts={target.counts}
-                    showClean={target.lastScan?.status === "done"}
-                  />
-                </td>
+                    {name}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {targets.map((target) => (
+                <tr key={target.id} className="border-b border-line">
+                  <td className="py-2 pr-6">
+                    <a
+                      href={`/targets/${target.id}`}
+                      className="font-mono text-sm text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
+                    >
+                      {target.domain}
+                    </a>
+                  </td>
+                  <td className="py-2 pr-6">
+                    <TargetStatusWord status={target.status} />
+                  </td>
+                  <td className="py-2 pr-6">
+                    {target.lastScan ? (
+                      <span
+                        className="flex items-baseline gap-3"
+                        // relative time is a snapshot printed at render time
+                        suppressHydrationWarning
+                      >
+                        <ScanStatusWord status={target.lastScan.status} />
+                        <span className="font-mono text-xs text-muted">
+                          {lastScanTime(target)}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-muted">never</span>
+                    )}
+                  </td>
+                  <td
+                    className="py-2 pr-6 font-mono text-xs text-muted"
+                    suppressHydrationWarning
+                  >
+                    {target.lastChangeAt ? timeAgo(target.lastChangeAt) : "-"}
+                  </td>
+                  <td className="py-2 pr-6 font-mono text-xs text-muted">
+                    {target.openPorts.length > 0
+                      ? target.openPorts.join(", ")
+                      : "-"}
+                  </td>
+                  <td className="py-2 pr-6">
+                    <Counts
+                      counts={target.counts}
+                      showClean={target.lastScan?.status === "done"}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {targets.length > 0 && (
@@ -148,7 +156,7 @@ export default async function AppPage() {
             </ul>
           )}
           <p className="mt-3 text-xs text-muted">
-            A change is unconfirmed until the next scan sees the same thing.
+            A transition is confirmed when the same state was seen two scans earlier.
           </p>
         </section>
       )}

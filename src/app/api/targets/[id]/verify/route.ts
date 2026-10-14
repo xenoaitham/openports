@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyTarget } from "@/lib/queries";
+import { isPublicDemo, DEMO_READ_ONLY_MESSAGE } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,9 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (isPublicDemo()) {
+    return NextResponse.json({ error: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
+  }
   const { id } = await params;
   const targetId = Number(id);
   if (!Number.isInteger(targetId) || targetId <= 0) {
