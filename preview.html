@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenPorts: demo preview</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="description" content="OpenPorts is an early cybersecurity project for checking domain exposure: ports, TLS, DNS and HTTP configuration. Preview the interface and run it locally.">
+<link rel="canonical" href="https://xenoaitham.github.io/openports/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenPorts: demo preview">
+<meta property="og:description" content="A preview of OpenPorts, an early cybersecurity project for monitoring domain exposure. Run it locally to check domains you own.">
+<meta property="og:url" content="https://xenoaitham.github.io/openports/">
+<meta property="og:image" content="https://xenoaitham.github.io/openports/img/dashboard.png">
+<meta property="og:image:alt" content="OpenPorts target dashboard with recent scan status">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenPorts: demo preview">
+<meta name="twitter:description" content="Check domain exposure with OpenPorts. Browse the interface and run it locally.">
+<meta name="twitter:image" content="https://xenoaitham.github.io/openports/img/dashboard.png">
+<style>
+  body { margin: 0; background: #faf9f5; color: #1a1a18;
+         font: 16px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px 72px; }
+  header { border-bottom: 1px solid #d8d6cd; }
+  header .wrap { display: flex; justify-content: space-between; align-items: center;
+                 gap: 16px; padding: 14px 24px; }
+  .logo { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
+  header a { font-size: 14px; }
+  a { color: inherit; text-underline-offset: 3px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 56px 0 16px; }
+  h2 { font-size: 20px; margin: 48px 0 10px; padding-bottom: 6px;
+       border-bottom: 1px solid #d8d6cd; }
+  .lede { font-size: 18px; color: #44423c; max-width: 680px; }
+  code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; }
+  pre { background: #f1efe8; border: 1px solid #d8d6cd; padding: 12px 16px;
+        overflow-x: auto; }
+  figure { margin: 20px 0 36px; }
+  video { display: block; width: 100%; height: auto; border: 1px solid #d8d6cd; box-sizing: border-box; }
+  figure img { width: 100%; height: auto; box-sizing: border-box;
+               border: 1px solid #d8d6cd; display: block; }
+  figcaption { font-size: 13px; color: #6b6960; margin-top: 8px; }
+  ul { padding-left: 20px; margin: 10px 0; }
+  li { margin: 5px 0; }
+  footer { border-top: 1px solid #d8d6cd; margin-top: 56px; padding-top: 16px;
+           font-size: 13px; color: #6b6960; }
+  @media (max-width: 600px) {
+    h1 { font-size: 30px; margin-top: 36px; }
+    .wrap { padding: 0 20px 48px; }
+    header .wrap { padding: 14px 20px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="logo">openports_</span>
+    <a href="https://github.com/xenoaitham/openports">Source on GitHub</a>
+  </div>
+</header>
+<main class="wrap">
+<h1>OpenPorts: demo preview</h1>
+<p class="lede">I wanted to build a SaaS for cybersecurity. OpenPorts is an early step:
+a tool for checking what a domain exposes and tracking changes between scans.</p>
+<p>The current version runs as a single instance without accounts or authentication.
+It checks common TCP ports, TLS certificates, mail-related DNS records and HTTP headers.
+Findings cover exposure and configuration; this is not a vulnerability assessment.</p>
+
+<h2>Run it locally</h2>
+<p>This page is a static preview. For the application, clone the
+<a href="https://github.com/xenoaitham/openports">repository</a> and run:</p>
+<pre>npm ci
+npm run dev</pre>
+<p>Open <a href="http://localhost:4310">http://localhost:4310</a>.
+Run tests with <code>npm test</code>. See the
+<a href="https://github.com/xenoaitham/openports/blob/main/README.md">README</a>
+for requirements and database configuration.</p>
+<p>Only scan domains you own or have permission to scan.</p>
+
+<h2>Local startup walkthrough</h2>
+<figure>
+  <video controls preload="metadata" poster="media/local-startup.png" aria-label="Local startup walkthrough showing an empty OpenPorts instance" aria-describedby="walkthrough-caption">
+    <source src="media/local-startup.mp4" type="video/mp4">
+    Your browser cannot play this video. <a href="media/local-startup.mp4">Download the walkthrough</a>.
+  </video>
+  <figcaption id="walkthrough-caption">A fresh local instance: the landing page and empty targets screen. No targets are submitted and no scans run.</figcaption>
+</figure>
+<p><a href="media/local-startup.mp4" download>Download the walkthrough (MP4)</a>.</p>
+
+<h2>Inside the application</h2>
+<p>Screenshots from the initial release show recorded scan data.</p>
+<figure>
+  <img src="img/dashboard.png" alt="Target dashboard showing scan status and recent changes" loading="lazy">
+  <figcaption>Targets and recent changes</figcaption>
+</figure>
+<figure>
+  <img src="img/verification.png" alt="DNS TXT record instructions for domain verification" loading="lazy">
+  <figcaption>Domain verification</figcaption>
+</figure>
+<figure>
+  <img src="img/findings.png" alt="Scan report with port results and findings" loading="lazy">
+  <figcaption>Scan findings</figcaption>
+</figure>
+<figure>
+  <img src="img/history.png" alt="Scan history showing previous scan results" loading="lazy">
+  <figcaption>Scan history</figcaption>
+</figure>
+
+<h2>Scope and limits</h2>
+<ul>
+  <li>Domain verification uses a DNS TXT record. Verification checks are covered by tests.</li>
+  <li>Scanning covers common TCP ports, not every port or protocol.</li>
+  <li>Results reflect one point in time. Network failures and changing services can affect findings.</li>
+  <li>The application uses one SQLite database and one process. Keep it local or restrict access externally.</li>
+</ul>
+<p>The <a href="https://github.com/xenoaitham/openports/blob/main/docs/design.md">design notes</a>
+explain the storage and change-confirmation choices.
+See <a href="https://github.com/xenoaitham/openports/blob/main/SECURITY.md">SECURITY.md</a>
+for reporting security issues.</p>
+<footer>
+  OpenPorts: <a href="https://github.com/xenoaitham/openports">source on GitHub</a>.
+  Released under the <a href="https://github.com/xenoaitham/openports/blob/main/LICENSE">MIT License</a>.
+</footer>
+</main>
+</body>
+</html>
